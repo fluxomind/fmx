@@ -1,0 +1,28 @@
+{
+  "models": [
+    {
+      "title": "Qwen Coder (local)",
+      "provider": "ollama",
+      "model": "qwen2.5-coder:7b",
+      "apiBase": "http://localhost:11434"
+    }
+  ],
+  "tabAutocompleteModel": {
+    "title": "Qwen Coder 1.5b (autocomplete)",
+    "provider": "ollama",
+    "model": "qwen2.5-coder:1.5b",
+    "apiBase": "http://localhost:11434"
+  },
+  "mcpServers": [
+    {
+      "name": "fluxomind",
+      "command": "fmx",
+      "args": ["mcp", "serve"]
+    }
+  ],
+  "contextProviders": [
+    { "name": "file" },
+    { "name": "code" },
+    { "name": "terminal" }
+  ]
+}

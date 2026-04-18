@@ -1,0 +1,58 @@
+{
+  "name": "@fluxomind/cli",
+  "version": "0.1.0",
+  "description": "Fluxomind Platform CLI — create, develop, deploy and manage extensions",
+  "bin": {
+    "fmx": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist/",
+    "setup/",
+    "docs/",
+    "templates/"
+  ],
+  "keywords": [
+    "fluxomind",
+    "cli",
+    "extensions",
+    "deploy"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluxomind/fmx.git"
+  },
+  "homepage": "https://docs.fluxomind.dev/cli",
+  "bugs": {
+    "url": "https://github.com/fluxomind/fmx/issues"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.10.1",
+    "chalk": "^5.3.0",
+    "chokidar": "^3.6.0",
+    "commander": "^12.1.0",
+    "open": "^10.1.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.3.4",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(fmx:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)"
+    ]
+  },
+  "mcpServers": {
+    "fluxomind": {
+      "command": "fmx",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

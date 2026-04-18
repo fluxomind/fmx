@@ -1,0 +1,8 @@
+{
+  "github.copilot.chat.mcp.enabled": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "files.associations": {
+    "fluxomind.extension.toml": "toml"
+  },
+  "fluxomind.devEnv.presetVersion": "1.0"
+}

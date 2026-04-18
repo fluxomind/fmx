@@ -1,0 +1,140 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`claude-code generators generateClaudeSettings has minimal permissions and enables MCP server 1`] = `
+{
+  "enabledMcpjsonServers": [
+    "fluxomind",
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(fmx:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+    ],
+  },
+}
+`;
+
+exports[`claude-code generators generateProjectMcpJson matches snapshot 1`] = `
+{
+  "mcpServers": {
+    "fluxomind": {
+      "args": [
+        "mcp",
+        "serve",
+      ],
+      "command": "fmx",
+    },
+  },
+}
+`;
+
+exports[`continue generators Anthropic config uses env var placeholder and no hardcoded key 1`] = `
+{
+  "mcpServers": [
+    {
+      "args": [
+        "mcp",
+        "serve",
+      ],
+      "command": "fmx",
+      "name": "fluxomind",
+    },
+  ],
+  "models": [
+    {
+      "apiKey": "\${env:ANTHROPIC_API_KEY}",
+      "model": "claude-sonnet-4-6",
+      "provider": "anthropic",
+      "title": "Anthropic claude-sonnet-4-6",
+    },
+  ],
+}
+`;
+
+exports[`continue generators Ollama config defaults to qwen2.5-coder and localhost 1`] = `
+{
+  "contextProviders": [
+    {
+      "name": "file",
+    },
+    {
+      "name": "code",
+    },
+    {
+      "name": "terminal",
+    },
+  ],
+  "mcpServers": [
+    {
+      "args": [
+        "mcp",
+        "serve",
+      ],
+      "command": "fmx",
+      "name": "fluxomind",
+    },
+  ],
+  "models": [
+    {
+      "apiBase": "http://localhost:11434",
+      "model": "qwen2.5-coder:7b",
+      "provider": "ollama",
+      "title": "Ollama qwen2.5-coder:7b",
+    },
+  ],
+  "tabAutocompleteModel": {
+    "apiBase": "http://localhost:11434",
+    "model": "qwen2.5-coder:1.5b",
+    "provider": "ollama",
+    "title": "Ollama qwen2.5-coder:1.5b (autocomplete)",
+  },
+}
+`;
+
+exports[`cursor generator matches snapshot with mcpServers root key 1`] = `
+{
+  "mcpServers": {
+    "fluxomind": {
+      "args": [
+        "mcp",
+        "serve",
+      ],
+      "command": "fmx",
+    },
+  },
+}
+`;
+
+exports[`vscode generators generateVscodeExtensionsRecommendations restricts to selected clients 1`] = `
+[
+  "github.copilot",
+  "github.copilot-chat",
+  "tamasfe.even-better-toml",
+]
+`;
+
+exports[`vscode generators generateVscodeMcpJson matches snapshot 1`] = `
+{
+  "servers": {
+    "fluxomind": {
+      "args": [
+        "mcp",
+        "serve",
+      ],
+      "command": "fmx",
+    },
+  },
+}
+`;
+
+exports[`vscode generators generateVscodeSettings matches snapshot 1`] = `
+{
+  "files.associations": {
+    "fluxomind.extension.toml": "toml",
+  },
+  "fluxomind.devEnv.presetVersion": "1.0",
+  "github.copilot.chat.mcp.enabled": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+}
+`;

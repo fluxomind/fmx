@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/github/vscode-copilot-chat/main/mcp.schema.json",
+  "servers": {
+    "fluxomind": {
+      "command": "fmx",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

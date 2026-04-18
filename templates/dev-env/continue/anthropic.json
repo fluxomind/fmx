@@ -1,0 +1,17 @@
+{
+  "models": [
+    {
+      "title": "Anthropic claude-sonnet-4-6",
+      "provider": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "apiKey": "${env:ANTHROPIC_API_KEY}"
+    }
+  ],
+  "mcpServers": [
+    {
+      "name": "fluxomind",
+      "command": "fmx",
+      "args": ["mcp", "serve"]
+    }
+  ]
+}

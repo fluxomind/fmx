@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "fluxomind": {
+      "command": "fmx",
+      "args": ["mcp", "serve"]
+    }
+  }
+}

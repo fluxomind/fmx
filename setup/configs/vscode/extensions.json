@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "fluxomind.fmcode",
+    "github.copilot",
+    "github.copilot-chat",
+    "continue.continue",
+    "anthropic.claude-code",
+    "tamasfe.even-better-toml"
+  ]
+}
