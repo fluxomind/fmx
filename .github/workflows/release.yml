@@ -16,7 +16,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # create GitHub Release
       id-token: write  # npm provenance (SLSA)
       packages: write  # GitHub Packages
     steps:
