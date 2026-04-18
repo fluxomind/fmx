@@ -1,0 +1,2 @@
+# fmx
+Fluxomind CLI
