@@ -14,10 +14,10 @@ interface McpRunOptions {
 }
 
 /**
- * Locate the compiled MCP bin script. Resolution strategy:
- *   1. FLUXOMIND_MCP_BIN env var (explicit override — useful for dev / monorepo).
- *   2. Relative to this file: ../../dist/mcp/bin.js (when CLI is bundled with platform build).
- *   3. Repo-local fallback: <repoRoot>/dist/mcp/bin.js (when running from source).
+ * Locate the bundled MCP server. Post-EVO-394: MCP lives in this repo + is
+ * bundled by @vercel/ncc into `dist/mcp/index.js` alongside the CLI. Resolution:
+ *   1. FLUXOMIND_MCP_BIN env var (explicit override — dev/debug).
+ *   2. Sibling dir: <thisDir>/../mcp/index.js (canonical — bundled with CLI).
  *
  * Returns the absolute path if found, else null.
  */
@@ -28,19 +28,10 @@ function locateMcpBin(): string | null {
   }
 
   // CLI compiles to CommonJS — __dirname is available at runtime.
+  // This file lives at dist/commands/mcp.js; MCP bundle at dist/mcp/index.js.
   const thisDir = typeof __dirname !== 'undefined' ? __dirname : process.cwd();
-
-  const candidates = [
-    join(thisDir, '../../dist/mcp/bin.js'),
-    join(thisDir, '../../../dist/mcp/bin.js'),
-    join(thisDir, '../../../../dist/mcp/bin.js'),
-    resolve(process.cwd(), 'dist/mcp/bin.js'),
-  ];
-
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return resolve(candidate);
-  }
-  return null;
+  const bundled = resolve(join(thisDir, '..', 'mcp', 'index.js'));
+  return existsSync(bundled) ? bundled : null;
 }
 
 async function runMcpServer(opts: McpRunOptions): Promise<void> {
