@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { saveTokens, getAuthStatus, clearAuth, getStoredTenants } from '../lib/auth-manager';
+import { saveTokens, getAuthStatus, clearAuth, getStoredTenants, migrateLegacyAuthJson } from '../lib/auth-manager';
 import { loadConfig } from '../lib/config-manager';
 import { runBrowserOAuth } from '../lib/oauth/browser-flow';
 import { runDeviceOAuth } from '../lib/oauth/device-flow';
@@ -95,6 +95,23 @@ authCommand
       clearAuth(opts.tenant);
       success(`Logged out${opts.tenant ? ` from "${opts.tenant}"` : ''}`);
     }
+  });
+
+authCommand
+  .command('migrate')
+  .description('Migrate legacy ~/.fmx/auth.json into unified ~/.fmx/config.json (EVO-394 CA-17)')
+  .option('--keep-legacy', 'Do not delete legacy auth.json after successful migration')
+  .action((opts: { keepLegacy?: boolean }) => {
+    const outcome = migrateLegacyAuthJson({ removeLegacy: !opts.keepLegacy });
+
+    if (!outcome.migrated) {
+      info(outcome.reason ?? 'Nothing to migrate.');
+      return;
+    }
+
+    success(
+      `Migrated ${outcome.tenantsConsolidated} tenant${outcome.tenantsConsolidated === 1 ? '' : 's'} to ~/.fmx/config.json${outcome.legacyRemoved ? ' (legacy file removed)' : ''}`,
+    );
   });
 
 authCommand

@@ -35,12 +35,18 @@ export const logsCommand = new Command('logs')
   .option('--since <time>', 'Show logs since (e.g., 1h, 30m, 2024-01-01)')
   .option('--limit <n>', 'Maximum number of log entries', '100')
   .option('--json', 'Output as NDJSON')
-  .action(async (extensionId: string | undefined, opts: { tail?: boolean; level?: string; since?: string; limit: string; json?: boolean }) => {
+  .option('--extension <id>', 'Filter by extension ID (alternative to positional arg) — EVO-394')
+  .option('--grep <pattern>', 'Regex match in log message field — EVO-394')
+  .option('--trace <cid>', 'Filter by correlation ID (OTel) — EVO-394')
+  .action(async (extensionId: string | undefined, opts: { tail?: boolean; level?: string; since?: string; limit: string; json?: boolean; extension?: string; grep?: string; trace?: string }) => {
     const params = new URLSearchParams();
-    if (extensionId) params.set('extensionId', extensionId);
+    const effectiveExtension = extensionId ?? opts.extension;
+    if (effectiveExtension) params.set('extensionId', effectiveExtension);
     if (opts.level) params.set('level', opts.level);
     if (opts.since) params.set('since', opts.since);
     if (opts.limit) params.set('limit', opts.limit);
+    if (opts.grep) params.set('grep', opts.grep);
+    if (opts.trace) params.set('trace', opts.trace);
 
     if (opts.tail) {
       info('Streaming logs... (Ctrl+C to stop)');

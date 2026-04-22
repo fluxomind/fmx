@@ -9,8 +9,12 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'crypto';
-import { hostname } from 'os';
+import { existsSync, readFileSync, unlinkSync } from 'fs';
+import { hostname, homedir } from 'os';
+import { join } from 'path';
 import { loadConfig, saveConfig } from './config-manager';
+
+const LEGACY_AUTH_JSON_PATH = join(homedir(), '.fmx', 'auth.json');
 
 export interface TenantAuth {
   accessToken: string;
@@ -52,13 +56,32 @@ function decrypt(data: string): string {
 
 function loadAuthStore(): StoredAuth {
   const config = loadConfig();
-  if (!config.auth) return { tenants: {} };
-  try {
-    const decrypted = decrypt(config.auth);
-    return JSON.parse(decrypted) as StoredAuth;
-  } catch {
-    return { tenants: {} };
+  if (config.auth) {
+    try {
+      const decrypted = decrypt(config.auth);
+      return JSON.parse(decrypted) as StoredAuth;
+    } catch {
+      return { tenants: {} };
+    }
   }
+
+  // EVO-394 CA-17: fallback gracioso para early adopter com ~/.fmx/auth.json legacy.
+  // Leitura apenas — migration real é via `fmx auth migrate`.
+  if (existsSync(LEGACY_AUTH_JSON_PATH)) {
+    try {
+      // eslint-disable-next-line no-console
+      console.error(
+        '[DEPRECATION] Reading ~/.fmx/auth.json (legacy). Run `fmx auth migrate` to consolidate.',
+      );
+      const raw = readFileSync(LEGACY_AUTH_JSON_PATH, 'utf-8');
+      const parsed = JSON.parse(raw) as StoredAuth;
+      return parsed.tenants ? parsed : { tenants: {} };
+    } catch {
+      return { tenants: {} };
+    }
+  }
+
+  return { tenants: {} };
 }
 
 function saveAuthStore(store: StoredAuth): void {
@@ -108,6 +131,71 @@ export function getAuthStatus(tenant?: string): {
     email: auth.email,
     tenant: key,
     expiresAt: auth.expiresAt,
+  };
+}
+
+/**
+ * EVO-394 CA-1 + CA-17: detects ~/.fmx/auth.json legacy file and consolidates
+ * into the unified ~/.fmx/config.json (under `config.auth`). Idempotent.
+ *
+ * Emits deprecation stderr + structured counter log `auth.path.legacy_detected`
+ * for opt-in telemetry.
+ *
+ * @returns migration outcome
+ */
+export interface MigrationOutcome {
+  migrated: boolean;
+  tenantsConsolidated: number;
+  legacyRemoved: boolean;
+  reason?: string;
+}
+
+export function migrateLegacyAuthJson(options: { removeLegacy?: boolean } = {}): MigrationOutcome {
+  if (!existsSync(LEGACY_AUTH_JSON_PATH)) {
+    return { migrated: false, tenantsConsolidated: 0, legacyRemoved: false, reason: 'no legacy file' };
+  }
+
+  // eslint-disable-next-line no-console
+  console.error(
+    '[DEPRECATION] ~/.fmx/auth.json detected (legacy format). Consolidating into ~/.fmx/config.json.',
+  );
+  // eslint-disable-next-line no-console
+  console.error(JSON.stringify({ event: 'auth.path.legacy_detected', count: 1 }));
+
+  let legacyPayload: StoredAuth;
+  try {
+    const raw = readFileSync(LEGACY_AUTH_JSON_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as StoredAuth;
+    legacyPayload = parsed.tenants ? parsed : { tenants: {} };
+  } catch (err) {
+    return {
+      migrated: false,
+      tenantsConsolidated: 0,
+      legacyRemoved: false,
+      reason: `failed to parse legacy auth.json: ${(err as Error).message}`,
+    };
+  }
+
+  const current = loadAuthStore();
+  const merged: StoredAuth = {
+    tenants: { ...legacyPayload.tenants, ...current.tenants },
+  };
+  saveAuthStore(merged);
+
+  let legacyRemoved = false;
+  if (options.removeLegacy !== false) {
+    try {
+      unlinkSync(LEGACY_AUTH_JSON_PATH);
+      legacyRemoved = true;
+    } catch {
+      // keep going — removal is best-effort
+    }
+  }
+
+  return {
+    migrated: true,
+    tenantsConsolidated: Object.keys(legacyPayload.tenants).length,
+    legacyRemoved,
   };
 }
 

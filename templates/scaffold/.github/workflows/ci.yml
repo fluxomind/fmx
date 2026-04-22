@@ -1,0 +1,26 @@
+name: CI
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Lint
+        run: deno lint src/
+
+      - name: Type check
+        run: deno check src/**/*.ts
+
+      - name: Validate manifest
+        run: npx --package @fluxomind/cli fmx validate
+
+      - name: Run local tests
+        run: npx --package @fluxomind/cli fmx test --local

@@ -9,8 +9,39 @@ export const rollbackCommand = new Command('rollback')
   .option('--list', 'List available versions')
   .option('--force', 'Skip confirmation')
   .option('--json', 'Output as JSON')
-  .action(async (version: string | undefined, opts: { list?: boolean; force?: boolean; json?: boolean }) => {
+  .option('--deployment <dep_id>', 'Rollback by deployment ID (alternative to semver) — EVO-394 CA-10')
+  .action(async (version: string | undefined, opts: { list?: boolean; force?: boolean; json?: boolean; deployment?: string }) => {
     const extensionId = 'current'; // TODO: resolve from manifest in cwd
+
+    // EVO-394 CA-10: rollback by deployment ID (mutually exclusive with <version>)
+    if (opts.deployment) {
+      if (version) {
+        error('Cannot combine <version> argument with --deployment <id>. Use one or the other.');
+        process.exit(1);
+      }
+
+      if (!opts.force && isInteractive()) {
+        info(`Rolling back to deployment ${opts.deployment}. Use --force to skip confirmation.`);
+      }
+
+      try {
+        const result = await post<{
+          deploymentId: string;
+          previousDeploymentId: string;
+          duration: number;
+        }>(`/api/code-engine/extensions/${extensionId}/rollback`, {
+          deploymentId: opts.deployment,
+        });
+
+        success(
+          `Rolled back to deployment ${result.deploymentId} ${dim(`(from ${result.previousDeploymentId}, ${result.duration}ms)`)}`,
+        );
+      } catch (err) {
+        error(`Rollback failed: ${(err as Error).message}`);
+        process.exit(1);
+      }
+      return;
+    }
 
     if (opts.list || !version) {
       try {

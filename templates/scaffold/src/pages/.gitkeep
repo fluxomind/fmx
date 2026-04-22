@@ -1,0 +1,2 @@
+# Pages — React components registered as routes in appEngine
+# One folder per page (e.g., pages/dashboard/page.tsx).

@@ -12,14 +12,19 @@ export const deployCommand = new Command('deploy')
   .option('--git', 'Deploy via Git push (requires EVO-163 GitHub integration)')
   .option('--env <environment>', 'Target environment', 'production')
   .option('--version <semver>', 'Override version')
-  .option('--force', 'Skip confirmation prompts')
+  .option('--force', 'Bypass strict manifest validation for emergency hotfix (EVO-394 CA-9). Audit trail records deploy_source=cli_force')
   .action(async (opts: { dir: string; dryRun?: boolean; git?: boolean; env: string; version?: string; force?: boolean }) => {
-    // Validate manifest locally (fail fast)
+    // Validate manifest locally (fail fast) — --force bypasses errors but still parses
     const manifest = validateManifestLocal(opts.dir);
     if (!manifest.valid) {
-      error('Manifest validation failed:');
-      manifest.errors.forEach((e) => error(`  ${e}`));
-      process.exit(1);
+      if (opts.force) {
+        warn('Manifest validation failed — bypassing due to --force (emergency hotfix):');
+        manifest.errors.forEach((e) => warn(`  ${e}`));
+      } else {
+        error('Manifest validation failed:');
+        manifest.errors.forEach((e) => error(`  ${e}`));
+        process.exit(1);
+      }
     }
 
     if (opts.git) {
@@ -65,6 +70,7 @@ export const deployCommand = new Command('deploy')
         hash: bundle.totalHash,
         version: opts.version,
         environment: opts.env,
+        deploy_source: opts.force ? 'cli_force' : 'cli',
       });
 
       success(`Deployed: ${manifest.manifest!.name} v${result.version} ${dim(`(${result.duration}ms)`)}`);

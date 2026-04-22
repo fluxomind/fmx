@@ -17,6 +17,10 @@ import { rollbackCommand } from './commands/rollback';
 import { configCommand } from './commands/config';
 import { mcpCommand } from './commands/mcp';
 import { devEnvCommand } from './commands/dev-env';
+import { validateCommand } from './commands/validate';
+import { publishCommand } from './commands/publish';
+import { cloneCommand } from './commands/clone';
+import { linkRepoCommand } from './commands/link-repo';
 import { error } from './lib/output';
 
 const program = new Command();
@@ -24,7 +28,7 @@ const program = new Command();
 program
   .name('fmx')
   .description('Fluxomind Platform CLI — create, develop, deploy and manage extensions')
-  .version('0.1.0');
+  .version('0.3.0-alpha.1');
 
 program.addCommand(initCommand);
 program.addCommand(authCommand);
@@ -37,6 +41,10 @@ program.addCommand(rollbackCommand);
 program.addCommand(configCommand);
 program.addCommand(mcpCommand);
 program.addCommand(devEnvCommand);
+program.addCommand(validateCommand);
+program.addCommand(publishCommand);
+program.addCommand(cloneCommand);
+program.addCommand(linkRepoCommand);
 
 program.parseAsync(process.argv).catch((err: Error) => {
   error(err.message);

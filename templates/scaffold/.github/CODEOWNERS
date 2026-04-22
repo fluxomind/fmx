@@ -1,0 +1,8 @@
+# Code owners — uncomment and adjust after creating your org/teams.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# /src/triggers/           @your-org/backend-team
+# /src/pages/              @your-org/frontend-team
+# /src/connectors/         @your-org/integrations-team
+# fluxomind.extension.toml @your-org/tech-lead
+# /.github/                @your-org/platform

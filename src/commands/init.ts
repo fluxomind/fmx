@@ -110,12 +110,21 @@ export const initCommand = new Command('init')
   .description('Scaffold a new extension project')
   .argument('<name>', 'Extension name (kebab-case)')
   .option('-t, --template <type>', 'Template type: extension, trigger, module', 'extension')
-  .option('--git', 'Initialize Git repo (creates remote if GitHub connected)')
+  .option('--git', 'Initialize Git repo (creates remote if GitHub App connected)')
+  .option('--git-provider <provider>', 'Git provider: github (default) | gitlab | link — EVO-394 CA-11/12', 'github')
+  .option('--git-target <org-or-url>', 'Organization (github/gitlab) or URL (link mode) — EVO-394')
   .option('--public', 'Create public repo (requires confirmation or --force)')
   .option('--force', 'Skip interactive confirmations (for CI)')
   .action(async (
     name: string,
-    opts: { template: string; git?: boolean; public?: boolean; force?: boolean },
+    opts: {
+      template: string;
+      git?: boolean;
+      gitProvider?: string;
+      gitTarget?: string;
+      public?: boolean;
+      force?: boolean;
+    },
   ) => {
     if (!isKebabCase(name)) {
       error(`Invalid name "${name}". Use kebab-case (e.g., my-extension).`);
@@ -162,6 +171,24 @@ export const initCommand = new Command('init')
     info(`  fmx dev    # start development`);
 
     if (!opts.git) {
+      return;
+    }
+
+    // EVO-394 CA-11/12: multi-provider Git dispatch
+    const provider = opts.gitProvider ?? 'github';
+    if (provider === 'gitlab') {
+      warn(`GitLab provider: coming soon — track progress in DP026 (integrationEngine)`);
+      info(`  For now, use: fmx init ${name} --git --git-provider github`);
+      info(`  Or create the repo manually and run: fmx link-repo <gitlab-url>`);
+      return;
+    }
+    if (provider === 'link') {
+      if (!opts.gitTarget) {
+        error('--git-provider link requires --git-target <url>');
+        process.exit(1);
+      }
+      info(`Linking ${name} to existing repo ${opts.gitTarget}...`);
+      info(`  Run inside ${name}: fmx link-repo ${opts.gitTarget}`);
       return;
     }
 

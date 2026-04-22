@@ -1,0 +1,2 @@
+# Triggers — event handlers (webhook, cron, record change)
+# One file per trigger. See https://docs.fluxomind.dev/extensions/triggers
