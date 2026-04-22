@@ -1,0 +1,9 @@
+[extension]
+name = "{EXTENSION_NAME}"
+version = "0.1.0"
+description = "A Fluxomind extension"
+author = "unknown"
+engine_version = "0.1.0"
+
+[permissions]
+data = ["read"]
