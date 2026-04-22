@@ -44,7 +44,8 @@ Detecta Node / npm / git / deno / ollama / fmx e emite warnings acionaveis. **Na
 ## 3. Instalar CLI
 
 ```bash
-npm install -g @fluxomind/cli
+# Versão alpha publicada (latest ainda aponta para 0.2.0-alpha.1 — promover após stable)
+npm install -g @fluxomind/cli@alpha
 fmx --version
 ```
 
@@ -213,4 +214,4 @@ Voce ve cada deploy + logs em tempo real.
 
 ---
 
-**Problemas ou duvidas?** Abra issue em [github.com/fluxomind/platform/issues](https://github.com/fluxomind/platform/issues) com tag `onboarding`.
+**Problemas ou duvidas?** Abra issue em [github.com/fluxomind/fmx/issues](https://github.com/fluxomind/fmx/issues) com label `onboarding` (o monorepo interno da plataforma não recebe issues públicas).
