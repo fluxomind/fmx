@@ -28,7 +28,7 @@ const program = new Command();
 program
   .name('fmx')
   .description('Fluxomind Platform CLI — create, develop, deploy and manage extensions')
-  .version('0.3.0-alpha.1');
+  .version('0.3.0-alpha.3');
 
 program.addCommand(initCommand);
 program.addCommand(authCommand);
