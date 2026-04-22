@@ -164,7 +164,7 @@ function tsConfig(): string {
 }
 
 function generateManifest(name: string, kind: TemplateKind): string {
-  return `[extension]\nname = "${name}"\nversion = "0.1.0"\ndescription = "A Fluxomind ${kind}"\n\n[permissions]\ndata = ["read"]\n`;
+  return `[extension]\nname = "${name}"\nversion = "0.1.0"\ndescription = "A Fluxomind ${kind}"\nauthor = "unknown"\nengine_version = "0.1.0"\n\n[permissions]\ndata = ["read"]\n`;
 }
 
 interface TemplateFile {

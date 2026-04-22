@@ -163,7 +163,7 @@ async function ensureAuthenticated(): Promise<{ tenant: string; email?: string }
 
 async function runSmokeTest(workspaceDir: string): Promise<{ ok: boolean; elapsedMs: number; message: string }> {
   const start = Date.now();
-  const init = spawnSync('fmx', ['init', 'demo-extension', '--template', 'minimal'], {
+  const init = spawnSync('fmx', ['init', 'demo-extension', '--template', 'extension'], {
     cwd: workspaceDir,
     stdio: 'pipe',
     timeout: SMOKE_TIMEOUT_MS / 2,
