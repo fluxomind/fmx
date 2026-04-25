@@ -43,6 +43,49 @@ O runbook leva do zero ao primeiro `fmx deploy` em menos de 30 minutos e cobre:
 
 Lista completa: `fmx --help`.
 
+## Configuracao do endpoint da plataforma
+
+O CLI resolve a URL da plataforma na seguinte ordem de precedencia (padrao
+industria — AWS CLI, gcloud, kubectl):
+
+1. **Flag** `--api-url <url>` (override pontual, util para debug)
+2. **Env var** `FLUXOMIND_API_URL` (recomendado para CI/CD e dev local)
+3. **Config file** `~/.fmx/config.json` campo `apiBaseUrl`
+4. **Default** `https://platform.fluxomind.com`
+
+### Exemplos
+
+Zero-config (default — producao):
+
+```bash
+fmx auth login
+# bate em https://platform.fluxomind.com
+```
+
+Override via env var (dev local ou CI):
+
+```bash
+export FLUXOMIND_API_URL=http://localhost:3000
+fmx auth login
+```
+
+Override pontual via flag (debug):
+
+```bash
+fmx auth login --api-url https://staging.fluxomind.com
+```
+
+Persistente via config file:
+
+```json
+{ "apiBaseUrl": "https://staging.fluxomind.com" }
+```
+
+### Comportamento de fallback
+
+- Config file com JSON invalido → CLI imprime warning em stderr e usa o default.
+- URL resolvida nao-HTTPS e nao-localhost → CLI imprime warning em stderr (nao bloqueia).
+
 ## Configurar AI client (copia + paste)
 
 Todos os templates vivem dentro do proprio pacote. Apos instalar o CLI:

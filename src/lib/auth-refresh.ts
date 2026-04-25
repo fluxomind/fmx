@@ -3,7 +3,7 @@
  * @package @fluxomind/cli
  */
 
-import { loadConfig } from './config-manager';
+import { resolveApiUrl } from './config-manager';
 import { getTenantAuth, saveTokens } from './auth-manager';
 
 const REFRESH_BUFFER_MS = 60_000;
@@ -51,8 +51,7 @@ async function performRefresh(
   refreshToken: string,
   fetchFn: typeof fetch,
 ): Promise<RefreshOutcome> {
-  const config = loadConfig();
-  const response = await fetchFn(`${config.apiBaseUrl}/api/v1/auth/refresh`, {
+  const response = await fetchFn(`${resolveApiUrl()}/api/v1/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
