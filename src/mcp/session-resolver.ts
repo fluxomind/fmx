@@ -12,7 +12,7 @@ export const ENV_AUTH_TOKEN = 'FLUXOMIND_MCP_AUTH_TOKEN';
 export const ENV_TENANT = 'FLUXOMIND_MCP_TENANT';
 export const ENV_API_BASE = 'FLUXOMIND_MCP_API_BASE';
 
-const DEFAULT_API_BASE = 'https://platform.fluxomind.dev';
+const DEFAULT_API_BASE = 'https://platform.fluxomind.com';
 
 export class McpAuthError extends Error {
   readonly code: 'MISSING_TOKEN' | 'MISSING_TENANT' | 'VERIFY_FAILED' | 'NETWORK_ERROR';

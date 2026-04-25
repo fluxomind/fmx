@@ -170,7 +170,7 @@ Output esperado:
 
 ```
 ✓ Deployed: minha-extension v0.0.1 em 3.2s
-  URL: https://<seu-tenant>.fluxomind.dev/ext/minha-extension
+  URL: https://<seu-tenant>.fluxomind.com/ext/minha-extension
 ```
 
 Se der erro `manifest invalid`, rode `fmx validate` (disponivel pos-EVO-394) para diagnostico.
@@ -209,7 +209,7 @@ Voce ve cada deploy + logs em tempo real.
 
 - **Wizard automatizado** — `fmx dev-env setup` (EVO-390, Wave 2). Substitui passos 2, 6 e 7 por uma unica invocacao interativa.
 - **VS Code Extension** — `fluxomind.fmcode` no Marketplace (EVO-391, Wave 3). Ganha autocomplete `fm.*`, diagnostics inline, painel de logs.
-- **Comunidade** — `docs.fluxomind.dev/community` (TBD — futura EVO docs publicas).
+- **Comunidade** — `docs.fluxomind.com/community` (TBD — futura EVO docs publicas).
 - **Paridade CLI ↔ playbook** — `fmx validate` + sync de nomenclatura (EVO-394, Wave 2).
 
 ---
