@@ -23,5 +23,5 @@ Fluxomind does not enforce these — they are governance decisions of your team 
 
 ## Links
 
-- [Fluxomind Developer Guide](https://docs.fluxomind.dev/fmcode)
+- [Fluxomind Developer Guide](https://docs.fluxomind.com/fmcode)
 - [profile-dev playbook](https://github.com/fluxomind/fmx/blob/main/docs/first-dev-setup.md)
