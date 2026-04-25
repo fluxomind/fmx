@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { saveTokens, getAuthStatus, clearAuth, getStoredTenants, migrateLegacyAuthJson } from '../lib/auth-manager';
-import { loadConfig } from '../lib/config-manager';
+import { resolveApiUrl } from '../lib/config-manager';
 import { runBrowserOAuth } from '../lib/oauth/browser-flow';
 import { runDeviceOAuth } from '../lib/oauth/device-flow';
 import { success, error, info, dim } from '../lib/output';
@@ -47,15 +47,16 @@ authCommand
   .description('Login via browser OAuth flow (default) or device code flow')
   .option('--tenant <name>', 'Tenant to authenticate with')
   .option('--device', 'Use device code flow (for environments without a browser)')
-  .action(async (opts: { tenant?: string; device?: boolean }) => {
+  .option('--api-url <url>', 'Override platform API base URL (precedence over env + config file)')
+  .action(async (opts: { tenant?: string; device?: boolean; apiUrl?: string }) => {
     const tenant = opts.tenant ?? 'default';
-    const config = loadConfig();
+    const apiBaseUrl = resolveApiUrl(opts.apiUrl);
 
     try {
       if (opts.device) {
         info('Initiating device authorization...');
         const tokens = await runDeviceOAuth({
-          platformBaseUrl: config.apiBaseUrl,
+          platformBaseUrl: apiBaseUrl,
           tenant,
           onUserAction: ({ userCode, verificationUri, verificationUriComplete }) => {
             info(`Open in a browser: ${verificationUri}`);
@@ -70,10 +71,10 @@ authCommand
 
       info('Opening browser for authentication...');
       const { code } = await runBrowserOAuth({
-        platformBaseUrl: config.apiBaseUrl,
+        platformBaseUrl: apiBaseUrl,
         tenant,
       });
-      const tokens = await exchangeBrowserCode(config.apiBaseUrl, code, tenant);
+      const tokens = await exchangeBrowserCode(apiBaseUrl, code, tenant);
       await persistTokens(tenant, tokens);
       success(`Authenticated as ${tokens.email} (tenant: ${tenant})`);
     } catch (err) {

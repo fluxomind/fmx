@@ -17,6 +17,7 @@ jest.mock('../lib/config-manager', () => ({
   loadConfig: jest.fn(() => ({ apiBaseUrl: 'http://localhost:3000', outputFormat: 'text' })),
   getConfigPath: jest.fn(() => '/tmp/fake-config.json'),
   getConfigDir: jest.fn(() => '/tmp/fake-dir'),
+  resolveApiUrl: jest.fn(() => 'http://localhost:3000'),
 }));
 
 jest.mock('../lib/preflight', () => ({

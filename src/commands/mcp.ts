@@ -3,7 +3,7 @@ import { spawn } from 'child_process';
 import { join, resolve } from 'path';
 import { existsSync } from 'fs';
 import { error, info, warn } from '../lib/output';
-import { loadConfig } from '../lib/config-manager';
+import { loadConfig, resolveApiUrl } from '../lib/config-manager';
 import { getAuthToken, getStoredTenants, getTenantAuth } from '../lib/auth-manager';
 
 const DEPRECATION_NOTICE =
@@ -11,6 +11,7 @@ const DEPRECATION_NOTICE =
 
 interface McpRunOptions {
   tenant?: string;
+  apiUrl?: string;
 }
 
 /**
@@ -36,6 +37,7 @@ function locateMcpBin(): string | null {
 
 async function runMcpServer(opts: McpRunOptions): Promise<void> {
   const config = loadConfig();
+  const apiBaseUrl = resolveApiUrl(opts.apiUrl);
   const tenants = getStoredTenants();
 
   if (tenants.length === 0) {
@@ -63,10 +65,10 @@ async function runMcpServer(opts: McpRunOptions): Promise<void> {
     ...process.env,
     FLUXOMIND_MCP_AUTH_TOKEN: token,
     FLUXOMIND_MCP_TENANT: tenant,
-    FLUXOMIND_MCP_API_BASE: config.apiBaseUrl,
+    FLUXOMIND_MCP_API_BASE: apiBaseUrl,
   };
 
-  info(`Starting MCP server (tenant=${tenant}, api=${config.apiBaseUrl})...`);
+  info(`Starting MCP server (tenant=${tenant}, api=${apiBaseUrl})...`);
 
   const child = spawn(process.execPath, [mcpBin], {
     stdio: 'inherit',
@@ -91,6 +93,7 @@ async function runMcpServer(opts: McpRunOptions): Promise<void> {
 const serveSubcommand = new Command('serve')
   .description('Run the Fluxomind MCP server via stdio (for Claude Code, Cursor, Copilot, Continue.dev)')
   .option('-t, --tenant <id>', 'Override active tenant (default: ~/.fmx/config.json)')
+  .option('--api-url <url>', 'Override platform API base URL (precedence over env + config file)')
   .action(async (opts: McpRunOptions) => {
     await runMcpServer(opts);
   });
@@ -99,10 +102,11 @@ export const mcpCommand = new Command('mcp')
   .description('Manage the Fluxomind MCP server — exposes platform tools to AI clients')
   .option('--local', '[DEPRECATED] Alias for `fmx mcp serve`. Removed in v2.0.0.')
   .option('-t, --tenant <id>', 'Override active tenant (default: ~/.fmx/config.json)')
+  .option('--api-url <url>', 'Override platform API base URL (precedence over env + config file)')
   .action(async (opts: McpRunOptions & { local?: boolean }) => {
     if (opts.local) {
       warn(DEPRECATION_NOTICE);
-      await runMcpServer({ tenant: opts.tenant });
+      await runMcpServer({ tenant: opts.tenant, apiUrl: opts.apiUrl });
       return;
     }
     error("Use 'fmx mcp serve' to start the MCP server.");

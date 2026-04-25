@@ -13,7 +13,7 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync, appendFileSync }
 import { join } from 'path';
 import { spawnSync } from 'child_process';
 import { getAuthStatus } from '../lib/auth-manager';
-import { loadConfig } from '../lib/config-manager';
+import { resolveApiUrl } from '../lib/config-manager';
 import { runPreflight } from '../lib/preflight';
 import {
   computeConfigHash,
@@ -360,12 +360,12 @@ async function runDoctor(workspaceDir: string): Promise<number> {
       : 'Not authenticated — run `fmx auth login`',
   });
 
-  const config = loadConfig();
-  const apiReachable = await pingMcpApi(config.apiBaseUrl);
+  const apiBaseUrl = resolveApiUrl();
+  const apiReachable = await pingMcpApi(apiBaseUrl);
   checks.push({
     name: 'Platform API',
     status: apiReachable ? 'ok' : 'warn',
-    detail: apiReachable ? `${config.apiBaseUrl} reachable` : `${config.apiBaseUrl} unreachable`,
+    detail: apiReachable ? `${apiBaseUrl} reachable` : `${apiBaseUrl} unreachable`,
   });
 
   const lock = readLockFile(workspaceDir);
