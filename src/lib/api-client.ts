@@ -3,7 +3,7 @@
  * @package @fluxomind/cli
  */
 
-import { loadConfig } from './config-manager';
+import { loadConfig, resolveApiUrl } from './config-manager';
 import { getAuthToken, getStoredTenants, getTenantAuth } from './auth-manager';
 import { refreshIfExpired, forceRefresh } from './auth-refresh';
 import { randomUUID } from 'crypto';
@@ -65,14 +65,13 @@ function resolveTargetTenant(explicit?: string): string | undefined {
 }
 
 export async function apiRequest<T = unknown>(options: RequestOptions): Promise<T> {
-  const config = loadConfig();
   const targetTenant = resolveTargetTenant(options.tenant);
 
   if (targetTenant) {
     await refreshIfExpired(targetTenant);
   }
 
-  const url = `${config.apiBaseUrl}${options.path}`;
+  const url = `${resolveApiUrl()}${options.path}`;
   const timeout = options.timeout ?? (options.path.includes('deploy') ? DEPLOY_TIMEOUT : DEFAULT_TIMEOUT);
 
   const buildHeaders = (): Record<string, string> => {

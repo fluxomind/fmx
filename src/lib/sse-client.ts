@@ -4,7 +4,7 @@
  */
 
 import { getAuthToken } from './auth-manager';
-import { loadConfig } from './config-manager';
+import { resolveApiUrl } from './config-manager';
 
 export interface SSEOptions {
   path: string;
@@ -24,9 +24,8 @@ export class SSEClient {
   }
 
   async connect(): Promise<void> {
-    const config = loadConfig();
     const token = getAuthToken();
-    const url = `${config.apiBaseUrl}${this.options.path}`;
+    const url = `${resolveApiUrl()}${this.options.path}`;
     const maxRetries = this.options.maxRetries ?? 5;
 
     this.controller = new AbortController();

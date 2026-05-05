@@ -7,7 +7,7 @@
  * @package @fluxomind/cli
  */
 
-import { loadConfig } from './config-manager';
+import { resolveApiUrl } from './config-manager';
 import type { AiClient } from './types/dev-env';
 
 export type WizardOutcome = 'success' | 'aborted' | 'smoke_failed';
@@ -23,8 +23,7 @@ interface CounterPayload {
 function emitCounterFireAndForget(payload: CounterPayload): void {
   if (process.env.FLUXOMIND_DISABLE_METRICS === '1') return;
   try {
-    const config = loadConfig();
-    const url = `${config.apiBaseUrl.replace(/\/$/, '')}${METRICS_ENDPOINT}`;
+    const url = `${resolveApiUrl().replace(/\/$/, '')}${METRICS_ENDPOINT}`;
     void fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
