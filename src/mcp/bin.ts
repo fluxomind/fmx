@@ -13,7 +13,7 @@
  * with env vars injected by the CLI:
  *   FLUXOMIND_MCP_AUTH_TOKEN    — session token from ~/.fmx/config.json
  *   FLUXOMIND_MCP_TENANT        — active tenant id
- *   FLUXOMIND_MCP_API_BASE      — platform API URL (default: https://platform.fluxomind.dev)
+ *   FLUXOMIND_MCP_API_BASE      — platform API URL (default: https://platform.fluxomind.com)
  *
  * All output to stderr; stdout is reserved for the MCP stdio protocol.
  *

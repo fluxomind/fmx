@@ -1,6 +1,6 @@
 /**
  * Default trigger handler — replace with your own logic.
- * Docs: https://docs.fluxomind.dev/fmcode/triggers
+ * Docs: https://docs.fluxomind.com/fmcode/triggers
  */
 export default async function handler(ctx: fm.TriggerContext) {
   const { operation, record, oldRecord } = ctx;

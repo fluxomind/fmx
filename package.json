@@ -35,7 +35,7 @@
     "type": "git",
     "url": "git+https://github.com/fluxomind/fmx.git"
   },
-  "homepage": "https://docs.fluxomind.dev/cli",
+  "homepage": "https://docs.fluxomind.com/cli",
   "bugs": {
     "url": "https://github.com/fluxomind/fmx/issues"
   },

@@ -78,7 +78,7 @@ Detalhes e validacao em `docs/first-dev-setup.md` (shippado com este pacote).
 - Runbook embarcado: `$(npm root -g)/@fluxomind/cli/docs/first-dev-setup.md`
 - Templates AI: `$(npm root -g)/@fluxomind/cli/setup/configs/`
 - Issues & bugs: [github.com/fluxomind/platform/issues](https://github.com/fluxomind/platform/issues)
-- Homepage: [docs.fluxomind.dev/cli](https://docs.fluxomind.dev/cli)
+- Homepage: [docs.fluxomind.com/cli](https://docs.fluxomind.com/cli)
 
 ## Licenca
 
