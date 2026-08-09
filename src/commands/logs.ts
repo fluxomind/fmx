@@ -3,6 +3,7 @@ import { get } from '../lib/api-client';
 import { SSEClient } from '../lib/sse-client';
 import { info, dim, error as errOut } from '../lib/output';
 import { supportsColor } from '../lib/output';
+import { resolveExtensionReference } from '../lib/extension-reference';
 
 const LEVEL_COLORS: Record<string, string> = {
   error: '\x1b[31m',
@@ -40,8 +41,15 @@ export const logsCommand = new Command('logs')
   .option('--trace <cid>', 'Filter by correlation ID (OTel) — EVO-394')
   .action(async (extensionId: string | undefined, opts: { tail?: boolean; level?: string; since?: string; limit: string; json?: boolean; extension?: string; grep?: string; trace?: string }) => {
     const params = new URLSearchParams();
-    const effectiveExtension = extensionId ?? opts.extension;
-    if (effectiveExtension) params.set('extensionId', effectiveExtension);
+    let effectiveExtension: string;
+    try {
+      effectiveExtension = resolveExtensionReference(extensionId ?? opts.extension);
+    } catch (err) {
+      errOut((err as Error).message);
+      process.exitCode = 1;
+      return;
+    }
+    params.set('extensionId', effectiveExtension);
     if (opts.level) params.set('level', opts.level);
     if (opts.since) params.set('since', opts.since);
     if (opts.limit) params.set('limit', opts.limit);
@@ -52,8 +60,11 @@ export const logsCommand = new Command('logs')
       info('Streaming logs... (Ctrl+C to stop)');
       const sse = new SSEClient({
         path: `/api/code-engine/logs/stream?${params.toString()}`,
-        onMessage: (_event, data) => formatLog(data, !!opts.json),
+        onMessage: (event, data) => {
+          if (event === 'log') formatLog(data, !!opts.json);
+        },
         onError: (err) => errOut(`Log stream error: ${err.message}`),
+        reconnectOnEof: true,
       });
 
       const cleanup = () => {

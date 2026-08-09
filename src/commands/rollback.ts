@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { get, post } from '../lib/api-client';
 import { success, error, info, dim, table } from '../lib/output';
 import { isInteractive } from '../lib/output';
+import { resolveExtensionReference } from '../lib/extension-reference';
 
 export const rollbackCommand = new Command('rollback')
   .description('Rollback to a previous version')
@@ -10,8 +11,17 @@ export const rollbackCommand = new Command('rollback')
   .option('--force', 'Skip confirmation')
   .option('--json', 'Output as JSON')
   .option('--deployment <dep_id>', 'Rollback by deployment ID (alternative to semver) — EVO-394 CA-10')
-  .action(async (version: string | undefined, opts: { list?: boolean; force?: boolean; json?: boolean; deployment?: string }) => {
-    const extensionId = 'current'; // TODO: resolve from manifest in cwd
+  .option('--extension <id>', 'Extension project ID or api name (defaults to manifest name)')
+  .action(async (version: string | undefined, opts: { list?: boolean; force?: boolean; json?: boolean; deployment?: string; extension?: string }) => {
+    let extensionId: string;
+    try {
+      extensionId = resolveExtensionReference(opts.extension);
+    } catch (err) {
+      error((err as Error).message);
+      process.exitCode = 1;
+      return;
+    }
+    const encodedExtensionId = encodeURIComponent(extensionId);
 
     // EVO-394 CA-10: rollback by deployment ID (mutually exclusive with <version>)
     if (opts.deployment) {
@@ -29,7 +39,7 @@ export const rollbackCommand = new Command('rollback')
           deploymentId: string;
           previousDeploymentId: string;
           duration: number;
-        }>(`/api/code-engine/extensions/${extensionId}/rollback`, {
+        }>(`/api/code-engine/extensions/${encodedExtensionId}/rollback`, {
           deploymentId: opts.deployment,
         });
 
@@ -50,7 +60,7 @@ export const rollbackCommand = new Command('rollback')
           status: string;
           deployedAt: string;
           deployedBy: string;
-        }>>(`/api/code-engine/extensions/${extensionId}/versions`);
+        }>>(`/api/code-engine/extensions/${encodedExtensionId}/versions`);
 
         if (opts.json) {
           console.log(JSON.stringify(versions, null, 2));
@@ -88,7 +98,7 @@ export const rollbackCommand = new Command('rollback')
         version: string;
         previousVersion: string;
         duration: number;
-      }>(`/api/code-engine/extensions/${extensionId}/rollback`, {
+      }>(`/api/code-engine/extensions/${encodedExtensionId}/rollback`, {
         version: targetVersion,
       });
 
