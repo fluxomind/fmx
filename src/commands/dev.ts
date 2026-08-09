@@ -35,7 +35,8 @@ export const devCommand = new Command('dev')
     // Start log streaming
     const sse = new SSEClient({
       path: `/api/code-engine/logs/stream?extensionId=${manifest.manifest!.name}&level=info`,
-      onMessage: (_event, data) => {
+      onMessage: (event, data) => {
+        if (event !== 'log') return;
         try {
           const log = JSON.parse(data);
           console.log(`${dim(log.timestamp ?? '')} [${log.level ?? 'info'}] ${log.message ?? data}`);
@@ -43,6 +44,7 @@ export const devCommand = new Command('dev')
           console.log(data);
         }
       },
+      reconnectOnEof: true,
     });
     sse.connect().catch(() => {});
 
