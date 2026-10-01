@@ -1,0 +1,7 @@
+{
+  "name": "Demo",
+  "namespace": "demo-app",
+  "description": "Aplicação de demonstração",
+  "icon": "calendar",
+  "status": "draft"
+}
