@@ -163,3 +163,17 @@ fmx api GET /api/v1/openapi.json --format json
 CRUD, batches, agregações, atualização condicional, configuração portátil de agentes, versões e execução de workflows estão documentados em [capacidades e contratos](docs/capacidades-plataforma.md). Use `agent` para agentes da plataforma; `agents` continua dedicado aos hooks AXI. Arquivos e stdin são aceitos com `--file <path|->`.
 
 Para CI, `FLUXOMIND_ACCESS_TOKEN` pode fornecer um token Bearer de sessão aceito pela API, sem armazená-lo ou imprimi-lo. Ele prevalece sobre a sessão salva e não faz refresh. A CLI não presume que tokens MCP e FMX sejam intercambiáveis.
+
+### Controles para agentes (0.4.0-alpha.3)
+
+Validação offline de workflows, catálogo de comandos, espera de execuções, exportação/diff e contexto por workspace. Novos comandos para objetos/campos, modelos/conhecimento de agentes, apps, conexões e jobs. Veja [contratos, exemplos e limites](docs/agent-workflows.md).
+
+```bash
+fmx catalog workflow run
+fmx workflow validate --file workflow.json
+fmx workflow run <id> --wait --timeout 60000
+fmx apps create --file templates/apps/app.json --dry-run
+fmx apps create --template <template-id> --dry-run
+fmx --dry-run workflow run <id>
+fmx doctor
+```

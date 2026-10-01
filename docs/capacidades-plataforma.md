@@ -91,6 +91,8 @@ Textos de detalhe são prévias de até 1000 caracteres com tamanho original; --
 
 Os testes de contrato executam o binário compilado contra um servidor HTTP local, com token sintético. Verificam método, rota, envelopes, filtros/campos, baseline, falha 207, códigos de saída, arquivo portátil sem truncamento e ausência de retries de mutação.
 
-No tenant autenticado foram validadas leituras de registros e agentes, metadata de objetos/campos, catálogo de ações e schema de data.findRecords, templates/definições e exportação de configuração de um agente. Não foram executadas mutações nem agentes/workflows reais em produção para testar a CLI.
+No tenant autenticado foram validadas leituras de registros e agentes, metadata de objetos/campos, catálogo de ações e schema de data.findRecords, templates/definições e exportação de configuração de um agente. Posteriormente foram criados e publicados dois workflows de demonstração, depois excluídos a pedido do usuário. A execução foi recusada pela fila com queue_age_exceeded; isso não comprova execução completa dos nós.
 
 Essa versão amplia a CLI de fato, mas não declara paridade integral com o MCP. `/api/v1/tools` usa um catálogo de exemplo (calculator/echo), então não foi usado como ponte para a ToolRegistry real. Modelagem especial de objetos, composição de páginas/apps, governança e integrações ainda precisam de comandos próprios e contratos validados. `api` permite usar APIs JSON existentes com autenticação, mas não cria endpoints nem garante compatibilidade com todas as ferramentas MCP. A rota enriched schema também retornou 500 no teste real e não foi promovida como um comando funcional.
+
+A versão 0.4.0-alpha.3 acrescenta controles para agentes e comandos adicionais. Consulte [contratos e limites da versão](agent-workflows.md). Nesta etapa, toda validação foi local; nenhuma chamada ao tenant de produção.

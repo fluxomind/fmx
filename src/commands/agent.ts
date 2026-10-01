@@ -1,9 +1,9 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { post } from '../lib/api-client';
+import { apiRequest, get, post } from '../lib/api-client';
 import { createRecord, deleteRecord, getRecord, listRecords, updateRecord } from '../lib/record-service';
-import { listOptions, objectOption, objectPayload, pathPart, payloadOptions, tenantOption, type ListOptions, type PayloadOptions } from '../lib/command-options';
+import { listOptions, objectOption, objectPayload, pathPart, payloadOptions, tenantOption, type JsonRecord, type ListOptions, type PayloadOptions } from '../lib/command-options';
 import { detail, mutationResult } from '../lib/platform-output';
 import { pageResult } from './records';
 import { print } from '../lib/output';
@@ -25,7 +25,7 @@ payloadOptions(agentCommand.command('update <id>').description('Update an agent;
   });
 tenantOption(agentCommand.command('delete <id>').description('Delete an agent'))
   .action(async (id: string, opts: PayloadOptions) => mutationResult(await deleteRecord('fm__agent', id, opts.tenant)));
-tenantOption(agentCommand.command('export <id>').description('Export complete portable configuration; --out writes lossless JSON'))
+tenantOption(agentCommand.command('export <id>').description('Export platform portable configuration; --out writes lossless JSON'))
   .option('--out <path>', 'Create a JSON file; refuses to overwrite an existing file')
   .action(async (id: string, opts: PayloadOptions & { out?: string }) => {
     const result = await post('/api/v1/agentConfig/export', { agentId: id }, opts.tenant);
@@ -51,3 +51,30 @@ payloadOptions(agentCommand.command('invoke <id>').description('Execute an agent
     mutationResult(await post(`/api/agents/${pathPart(id)}/runs/invoke`, body, opts.tenant));
   });
 agentCommand.addHelpText('after', '\nExamples:\n  fmx agent list\n  fmx agent export <id> --out agent.json\n  fmx agent import --file agent.json --mode create --name "<name>"');
+
+const models = agentCommand.command('models').description('Discover model slots and configure assignments through the agent API');
+tenantOption(models.command('list <id>').description('Read current assignments and available models; --full includes compatibility metadata'))
+  .option('--full', 'Include available-model and slot metadata')
+  .action(async (id: string, opts: PayloadOptions) => {
+    const result = await get<JsonRecord>(`/api/agent-studio/agents/${pathPart(id)}/models`, opts.tenant);
+    if (opts.full) print(result); else print({ assignments: result.assignments, profileAssignments: result.profileAssignments, slots: Array.isArray(result.slots) ? result.slots.map((s: JsonRecord) => ({ key: s.key, label: s.label, role: s.role })) : [], help: `fmx agent models list ${id} --full` });
+  });
+payloadOptions(models.command('assign <id>').description('Assign a model; payload requires assignment.modelCatalogId and role or slotKey'))
+  .action(async (id: string, opts: PayloadOptions) => {
+    const body = objectPayload(opts); const assignment = body.assignment as JsonRecord | undefined;
+    if (!assignment || typeof assignment.modelCatalogId !== 'string' || !assignment.modelCatalogId.trim() || !(typeof assignment.role === 'string' && assignment.role.trim() || typeof assignment.slotKey === 'string' && assignment.slotKey.trim())) throw new InvalidArgumentError('Provide assignment with nonempty modelCatalogId and role or slotKey');
+    if (Object.keys(body).some(k => k !== 'assignment')) throw new InvalidArgumentError('Model assign accepts only assignment; profile removal is a separate platform operation');
+    mutationResult(await apiRequest({ method: 'PUT', path: `/api/agent-studio/agents/${pathPart(id)}/models`, body, tenant: opts.tenant }));
+  });
+const knowledge = agentCommand.command('knowledge').description('Discover and link knowledge bases through the agent API');
+tenantOption(knowledge.command('list <id>').description('Read linked knowledge bases'))
+  .action(async (id: string, opts: PayloadOptions) => {
+    const result = await get<{ data: JsonRecord[] }>(`/api/agent-studio/agents/${pathPart(id)}/knowledge`, opts.tenant);
+    print({ count: result.data.length, total: null, knowledge: result.data.map(k => ({ junctionId: k.junctionId, knowledgeId: k.knowledgeId, name: (k.knowledge as JsonRecord | null)?.name })), help: `fmx agent knowledge link ${id} --file <links.json>` });
+  });
+payloadOptions(knowledge.command('link <id>').description('Associate existing knowledge bases; payload requires knowledgeIds array'))
+  .action(async (id: string, opts: PayloadOptions) => {
+    const body = objectPayload(opts);
+    if (!Array.isArray(body.knowledgeIds) || !body.knowledgeIds.length || body.knowledgeIds.some(value => typeof value !== 'string' || !value.trim()) || Object.keys(body).some(k => k !== 'knowledgeIds')) throw new InvalidArgumentError('Provide only knowledgeIds, a nonempty string array');
+    mutationResult(await post(`/api/agent-studio/agents/${pathPart(id)}/knowledge`, body, opts.tenant));
+  });

@@ -6,6 +6,8 @@
 import { loadConfig, resolveApiUrl } from './config-manager';
 import { getAuthToken, getStoredTenants, getTenantAuth } from './auth-manager';
 import { refreshIfExpired, forceRefresh } from './auth-refresh';
+import { isDryRun, DryRunPreview } from './dry-run';
+import { projectContext } from './project-context';
 import { randomUUID } from 'crypto';
 
 export class AuthError extends Error {
@@ -51,6 +53,7 @@ interface RequestOptions {
   headers?: Record<string, string>;
   timeout?: number;
   tenant?: string;
+  retries?: number;
 }
 
 const DEFAULT_TIMEOUT = 30_000;
@@ -60,6 +63,8 @@ const RETRY_DELAY_MS = 1000;
 
 function resolveTargetTenant(explicit?: string): string | undefined {
   if (explicit) return explicit;
+  const project = projectContext();
+  if (project) return project.tenant;
   const config = loadConfig();
   if (config.defaultTenant) return config.defaultTenant;
   const [first] = getStoredTenants();
@@ -67,6 +72,7 @@ function resolveTargetTenant(explicit?: string): string | undefined {
 }
 
 export async function apiRequest<T = unknown>(options: RequestOptions): Promise<T> {
+  if (isDryRun() && options.method !== 'GET') throw new DryRunPreview(options.method, options.path, options.body);
   const envToken = process.env.FLUXOMIND_ACCESS_TOKEN;
   const targetTenant = envToken ? undefined : resolveTargetTenant(options.tenant);
 
@@ -90,24 +96,19 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
   };
 
   async function execute(headers: Record<string, string>): Promise<Response> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
-    try {
-      return await fetch(url, {
-        method: options.method,
-        headers,
-        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timer);
-    }
+    return await fetch(url, {
+      method: options.method,
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      // Keep the deadline active while the response body is being read too.
+      signal: AbortSignal.timeout(timeout),
+    });
   }
 
   let lastError: Error | null = null;
   let refreshAttempted = false;
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt <= (options.retries ?? MAX_RETRIES); attempt++) {
     try {
       const headers = buildHeaders();
       const response = await execute(headers);
@@ -144,16 +145,20 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
 
       if (response.status === 204 || response.status === 205) return undefined as T;
       try { return (await response.json()) as T; }
-      catch { throw new ValidationError('Platform returned an invalid JSON response. The request will not be repeated.'); }
+      catch (err) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) throw err;
+        throw new ValidationError('Platform returned an invalid JSON response. The request will not be repeated.');
+      }
     } catch (err) {
       lastError = err as Error;
+      if (lastError.name === 'AbortError' || lastError.name === 'TimeoutError') lastError = new NetworkError(`Request timed out after ${timeout}ms`);
 
       if (err instanceof AuthError || err instanceof ValidationError || (err instanceof ServerError && err.statusCode < 500)) {
         throw err;
       }
 
-      if (options.method !== 'GET') throw err;
-      if (attempt < MAX_RETRIES) {
+      if (options.method !== 'GET') throw lastError;
+      if (attempt < (options.retries ?? MAX_RETRIES)) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;
       }

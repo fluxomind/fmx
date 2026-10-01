@@ -20,7 +20,8 @@ import { validateCommand } from './commands/validate';
 import { publishCommand } from './commands/publish';
 import { cloneCommand } from './commands/clone';
 import { linkRepoCommand } from './commands/link-repo';
-import { configureOutput, error } from './lib/output';
+import { isDryRun, setDryRun, DryRunPreview } from './lib/dry-run';
+import { configureOutput, print, error } from './lib/output';
 import { VERSION } from './version';
 import { home } from './lib/home';
 import { workflowCommand } from './commands/workflow';
@@ -29,6 +30,11 @@ import { apiCommand } from './commands/api';
 import { recordsCommand } from './commands/records';
 import { agentsCommand } from './commands/agents';
 import { metadataCommand, queryCommand } from './commands/inspect';
+import { actionableError } from './lib/actionable-error';
+import { modelCommand, appsCommand, connectionsCommand, jobsCommand } from './commands/platform';
+import { doctorCommand } from './commands/doctor';
+import { contextCommand } from './commands/context';
+import { catalogCommand } from './commands/catalog';
 import { loadConfig } from './lib/config-manager';
 
 const program = new Command();
@@ -37,6 +43,7 @@ program
   .name('fmx')
   .description('Fluxomind Platform CLI — create, develop, deploy and manage extensions')
   .version(VERSION)
+  .option('--dry-run', 'Preview API-backed platform writes; reads may occur; auth/local setup are excluded')
   .option('--format <format>', 'Output format: toon, json, text', 'toon')
   .action(home);
 
@@ -55,6 +62,10 @@ program.addCommand(publishCommand);
 program.addCommand(cloneCommand);
 program.addCommand(linkRepoCommand);
 
+for (const command of [modelCommand, appsCommand, connectionsCommand, jobsCommand]) program.addCommand(command);
+program.addCommand(catalogCommand(program));
+program.addCommand(contextCommand);
+program.addCommand(doctorCommand);
 program.addCommand(apiCommand);
 program.addCommand(workflowCommand);
 program.addCommand(agentCommand);
@@ -77,15 +88,21 @@ program.hook('preAction', (_root, action) => {
   const value = program.getOptionValueSource('format') === 'cli' ? requested : (stored === 'text' ? 'toon' : stored);
   if (!['toon', 'json', 'text'].includes(value)) program.error('--format must be toon, json or text', { exitCode: 2 });
   configureOutput(value);
+  setDryRun(Boolean(action.optsWithGlobals().dryRun));
+  if (isDryRun()) {
+    let top = action; while (top.parent && top.parent !== program) top = top.parent;
+    if (!['api', 'records', 'workflow', 'agent', 'model', 'apps', 'connections', 'jobs', 'doctor', 'catalog'].includes(top.name())) action.error('--dry-run is supported for API-backed platform commands, not authentication or local setup', { exitCode: 2 });
+  }
 });
 // Usage failures can occur before preAction (unknown flags). Preserve the explicitly requested output format.
 const formatIndex = process.argv.indexOf('--format');
 configureOutput(formatIndex >= 0 && process.argv[formatIndex + 1] === 'json' || process.argv.includes('--format=json') || process.argv.includes('--json') ? 'json' : 'toon');
 program.parseAsync(process.argv).catch((err: Error) => {
+  if (err instanceof DryRunPreview) { print(err.preview); return; }
   if (err instanceof CommanderError && err.exitCode === 0) return;
   const usage = err instanceof CommanderError || err.name === 'InvalidArgumentError';
-  error(err.message, usage ? usageHelp ?? activeHelp ?? 'Use the command with --help to see valid arguments and flags.' :
-    err.name === 'AuthError' ? 'fmx auth login --device --tenant <tenant-uuid>' : undefined,
-    !usage && 'statusCode' in err ? { status: (err as { statusCode: number }).statusCode, ...('code' in err && err.code ? { code: err.code } : {}), ...('details' in err && err.details ? { details: err.details } : {}) } : undefined);
+  const guidance = actionableError(err, process.argv.includes('workflow') ? process.argv[process.argv.indexOf('workflow') + 1] : undefined, process.argv);
+  error(err.message, usage ? usageHelp ?? activeHelp ?? 'Use the command with --help to see valid arguments and flags.' : guidance.help,
+    usage ? { code: 'INVALID_USAGE' } : guidance.fields);
   process.exitCode = usage ? 2 : 1;
 });
