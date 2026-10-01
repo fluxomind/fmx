@@ -22,12 +22,23 @@ export const guidance = [
   'fmx apps create --file <app.json> --dry-run',
   'fmx connections list',
   'fmx agents setup',
+  'fmx dashboard',
+  'fmx access record <object> <id>',
+  'fmx catalog apps components create',
+  'fmx agent workers list <id>',
+  'fmx agent tools get <id>',
+  'fmx knowledge status <id>',
+  'fmx policy pending',
+  'fmx jobs schedules list',
+  'fmx resources validate --file <manifest.json>',
+  'fmx --read-only resources plan --file <manifest.json> --remote --out <plan.json>',
+  'fmx --read-only --dry-run resources apply --file <plan.json>',
 ];
 export function home(): void {
   const config = loadConfig();
   const project = projectContext();
   const tenants = getStoredTenants().map(tenant => ({ tenant, authenticated: getAuthStatus(tenant).authenticated }));
-  print({ bin: resolve(process.argv[1]).replace(homedir(), '~'), description: 'Develop Fluxomind extensions and inspect the active tenant', version: VERSION,
+  print({ bin: resolve(process.argv[1]).replace(homedir(), '~'), description: 'Build and operate Fluxomind apps, agents, workflows and extensions', version: VERSION,
     cwd: process.cwd(), api: resolveApiUrl(), project: project ?? null, tenant: project?.tenant ?? config.defaultTenant ?? tenants[0]?.tenant ?? null,
     authentication: tenants, help: tenants.some(t => t.authenticated) ? guidance.slice(1, 5) : [guidance[0]] });
 }

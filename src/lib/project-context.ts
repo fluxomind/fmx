@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { InvalidArgumentError } from 'commander';
 import { z } from 'zod';
-export const projectContextSchema = z.strictObject({ tenant: z.uuid(), environment: z.enum(['development', 'test', 'production']) });
-export function projectContext(start = process.cwd()): { path: string; tenant: string; environment: string } | undefined {
+export const projectContextSchema = z.strictObject({ tenant: z.uuid(), environment: z.enum(['development', 'test', 'production']), app: z.uuid().optional(), liveContext: z.boolean().optional() });
+export function projectContext(start = process.cwd()): ({ path: string } & z.infer<typeof projectContextSchema>) | undefined {
   let directory = resolve(start);
   while (true) {
     const path = join(directory, '.fmx', 'project.json');

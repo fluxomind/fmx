@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { print } from '../lib/output';
+import { commandContract } from '../lib/command-contract';
 export function catalogCommand(root: Command): Command {
   return new Command('catalog').description('Offline machine-readable command reference; no authentication or HTTP calls')
     .argument('[command...]', 'Command path, for example workflow run')
@@ -8,8 +9,9 @@ export function catalogCommand(root: Command): Command {
       let command = root;
       for (const part of path) { const next = command.commands.find(c => c.name() === part); if (!next) throw new InvalidArgumentError(`Unknown command: ${part}. Use fmx catalog`); command = next; }
       function describe(c: Command): unknown {
-        return { name: c.name(), description: c.description(), arguments: c.registeredArguments.map(a => ({ name: a.name(), required: a.required, variadic: a.variadic })), options: c.options.map(o => ({ flags: o.flags, description: o.description, mandatory: o.mandatory, ...(o.defaultValue !== undefined ? { default: o.defaultValue } : {}) })), ...(opts.full ? { help: c.helpInformation(), commands: c.commands.map(describe) } : { commands: c.commands.map(child => ({ name: child.name(), description: child.description() })) }) };
+        const contract = commandContract(c);
+        return { ...(contract ? { contract } : {}), name: c.name(), description: c.description(), arguments: c.registeredArguments.map(a => ({ name: a.name(), required: a.required, variadic: a.variadic })), options: c.options.map(o => ({ flags: o.flags, description: o.description, mandatory: o.mandatory, ...(o.defaultValue !== undefined ? { default: o.defaultValue } : {}) })), ...(opts.full ? { help: c.helpInformation(), commands: c.commands.map(describe) } : { commands: c.commands.map(child => ({ name: child.name(), description: child.description() })) }) };
       }
-      print({ source: 'local-cli', command: describe(command), help: opts.full ? undefined : `fmx catalog ${path.join(' ')} --full`.replace(/ +/g, ' ') });
+      print({ schemaVersion: 1, source: 'local-cli', command: describe(command), globalOptions: root.options.map(o => ({ flags: o.flags, description: o.description, ...(o.defaultValue !== undefined ? { default: o.defaultValue } : {}) })), help: opts.full ? undefined : `fmx catalog ${path.join(' ')} --full`.replace(/ +/g, ' ') });
     });
 }

@@ -177,3 +177,11 @@ fmx apps create --template <template-id> --dry-run
 fmx --dry-run workflow run <id>
 fmx doctor
 ```
+
+## Agentes e plataforma — 0.4.0-alpha.4
+
+Use `fmx dashboard` para contexto vivo e `fmx access` para capabilities fornecidas pelo servidor. Os novos contratos de escrita aparecem em `fmx catalog <comando>` com schema e efeitos. `--read-only` ou `FMX_READ_ONLY=1` bloqueia requests diferentes de GET nos comandos de plataforma; `--dry-run` permite previews sem envio.
+
+A versão acrescenta componentes de páginas, workers, allowlists de ferramentas, conhecimento, aprovações/HITL, schedules e controle/observação de jobs. `resources validate/plan/apply` oferece planos de campos de registros, updates condicionais e resultados parciais explícitos. O dry run não comprova autorização de escrita.
+
+[Contratos, exemplos, provas e limites](docs/agent-platform.md). No checkout, `npm run test:live` executa smoke checks autenticados com o guard de leitura, sem criar recursos no tenant.

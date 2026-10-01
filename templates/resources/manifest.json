@@ -1,0 +1,13 @@
+{
+  "apiVersion": "fmx/v1",
+  "apiOrigin": "https://platform.fluxomind.com",
+  "tenant": "00000000-0000-7000-8000-000000000001",
+  "resources": [
+    {
+      "key": "request-demo",
+      "object": "demo__request",
+      "match": {"external_id": "demo-request-1"},
+      "data": {"external_id": "demo-request-1", "title": "Demonstração"}
+    }
+  ]
+}

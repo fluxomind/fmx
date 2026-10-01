@@ -1,7 +1,7 @@
 {
   "name": "@fluxomind/cli",
-  "version": "0.4.0-alpha.3",
-  "description": "Fluxomind Platform CLI — create, develop, deploy and manage extensions",
+  "version": "0.4.0-alpha.4",
+  "description": "Fluxomind Platform CLI \u2014 build and operate apps, agents, workflows and extensions",
   "bin": {
     "fmx": "./dist/bin.js"
   },
@@ -11,6 +11,7 @@
     "build": "npm run clean && npm run build:cli && npm run skill:check",
     "dev": "tsc --watch",
     "test": "vitest run",
+    "test:live": "node scripts/live-readonly.cjs",
     "prepublishOnly": "npm run build",
     "test:watch": "vitest",
     "clean": "node -e \"require('node:fs').rmSync('dist', {recursive:true, force:true})\"",

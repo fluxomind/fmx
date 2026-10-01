@@ -9,7 +9,8 @@ contextCommand.command('show').description('Read project context and API origin 
   .action(() => print({ project: projectContext() ?? null, api: resolveApiUrl(), help: 'fmx context init --tenant <tenant-uuid> --environment <test|development|production>' }));
 contextCommand.command('init').description('Write .fmx/project.json in the current directory; refuses to overwrite')
   .requiredOption('--tenant <uuid>', 'Tenant UUID').requiredOption('--environment <name>', 'development, test or production')
-  .action((opts: { tenant: string; environment: string }) => {
+  .option('--app <uuid>', 'App UUID for the live dashboard').option('--live-context', 'Opt in to GET-only live context when running fmx without arguments')
+  .action((opts: { tenant: string; environment: string; app?: string; liveContext?: boolean }) => {
     const parsed = projectContextSchema.safeParse(opts); if (!parsed.success) throw new InvalidArgumentError('Expected --tenant UUID and --environment development, test or production');
     mkdirSync(resolve('.fmx'), { recursive: true }); const path = resolve('.fmx/project.json');
     writeFileSync(path, JSON.stringify(parsed.data, null, 2) + '\n', { flag: 'wx', mode: 0o600 }); print({ ok: true, path, project: parsed.data });

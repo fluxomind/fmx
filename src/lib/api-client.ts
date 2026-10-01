@@ -9,9 +9,10 @@ import { refreshIfExpired, forceRefresh } from './auth-refresh';
 import { isDryRun, DryRunPreview } from './dry-run';
 import { projectContext } from './project-context';
 import { randomUUID } from 'crypto';
+import { isReadOnly, ReadOnlyError } from './request-policy';
 
 export class AuthError extends Error {
-  constructor(message: string) {
+  constructor(message: string, public statusCode?: number) {
     super(message);
     this.name = 'AuthError';
   }
@@ -28,6 +29,7 @@ export class ValidationError extends Error {
   constructor(
     message: string,
     public details?: unknown,
+    public statusCode?: number,
   ) {
     super(message);
     this.name = 'ValidationError';
@@ -61,7 +63,7 @@ const DEPLOY_TIMEOUT = 120_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
-function resolveTargetTenant(explicit?: string): string | undefined {
+export function resolveTargetTenant(explicit?: string): string | undefined {
   if (explicit) return explicit;
   const project = projectContext();
   if (project) return project.tenant;
@@ -73,6 +75,7 @@ function resolveTargetTenant(explicit?: string): string | undefined {
 
 export async function apiRequest<T = unknown>(options: RequestOptions): Promise<T> {
   if (isDryRun() && options.method !== 'GET') throw new DryRunPreview(options.method, options.path, options.body);
+  if (isReadOnly() && options.method !== 'GET') throw new ReadOnlyError();
   const envToken = process.env.FLUXOMIND_ACCESS_TOKEN;
   const targetTenant = envToken ? undefined : resolveTargetTenant(options.tenant);
 
@@ -88,6 +91,8 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Idempotency-Key': idempotencyKey,
+      'x-correlation-id': idempotencyKey,
+      'x-request-id': idempotencyKey,
       ...options.headers,
     };
     const token = envToken ?? (targetTenant ? getTenantAuth(targetTenant)?.accessToken ?? null : getAuthToken());
@@ -122,16 +127,16 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
             continue;
           }
         }
-        throw new AuthError('Session expired. Run: fmx auth login');
+        throw new AuthError('Session expired. Run: fmx auth login', 401);
       }
 
       if (response.status === 403) {
-        throw new AuthError('Permission denied. Check your tenant configuration.');
+        throw new AuthError('Permission denied. Check your tenant configuration.', 403);
       }
 
       if (response.status === 422) {
         const data = await response.json().catch(() => ({}));
-        throw new ValidationError('Validation failed', data);
+        throw new ValidationError('Validation failed', data, 422);
       }
 
       if (!response.ok) {
@@ -147,11 +152,12 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
       try { return (await response.json()) as T; }
       catch (err) {
         if (err instanceof Error && (err.name === 'AbortError' || err.name === 'TimeoutError')) throw err;
-        throw new ValidationError('Platform returned an invalid JSON response. The request will not be repeated.');
+        throw Object.assign(new ValidationError('Platform returned an invalid JSON response. The request will not be repeated.'), { code: 'INVALID_RESPONSE' });
       }
     } catch (err) {
       lastError = err as Error;
       if (lastError.name === 'AbortError' || lastError.name === 'TimeoutError') lastError = new NetworkError(`Request timed out after ${timeout}ms`);
+      Object.assign(lastError, { requestId: idempotencyKey });
 
       if (err instanceof AuthError || err instanceof ValidationError || (err instanceof ServerError && err.statusCode < 500)) {
         throw err;
