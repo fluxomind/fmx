@@ -36,16 +36,25 @@ import { doctorCommand } from './commands/doctor';
 import { contextCommand } from './commands/context';
 import { catalogCommand } from './commands/catalog';
 import { loadConfig } from './lib/config-manager';
+import { registerPlatformExtensions } from './commands/platform-extensions';
+import { knowledgeCommand } from './commands/knowledge';
+import { accessCommand } from './commands/access';
+import { isReadOnly, setReadOnly } from './lib/request-policy';
+import { dashboard, dashboardCommand } from './commands/dashboard';
+import { resourcesCommand } from './commands/resources';
+import { projectContext } from './lib/project-context';
+import { policyCommand } from './commands/policy';
 
 const program = new Command();
 
 program
   .name('fmx')
-  .description('Fluxomind Platform CLI — create, develop, deploy and manage extensions')
+  .description('Fluxomind Platform CLI — build and operate apps, agents, workflows and extensions')
   .version(VERSION)
   .option('--dry-run', 'Preview API-backed platform writes; reads may occur; auth/local setup are excluded')
+  .option('--read-only', 'Permit GET only for platform commands; auth refresh is separate; legacy commands excluded')
   .option('--format <format>', 'Output format: toon, json, text', 'toon')
-  .action(home);
+  .action(async () => { const project = projectContext(); if (project?.liveContext) await dashboard(project.tenant, project.app); else home(); });
 
 program.addCommand(initCommand);
 program.addCommand(authCommand);
@@ -63,6 +72,12 @@ program.addCommand(cloneCommand);
 program.addCommand(linkRepoCommand);
 
 for (const command of [modelCommand, appsCommand, connectionsCommand, jobsCommand]) program.addCommand(command);
+registerPlatformExtensions();
+program.addCommand(knowledgeCommand);
+program.addCommand(accessCommand);
+program.addCommand(resourcesCommand);
+program.addCommand(dashboardCommand);
+program.addCommand(policyCommand);
 program.addCommand(catalogCommand(program));
 program.addCommand(contextCommand);
 program.addCommand(doctorCommand);
@@ -89,9 +104,10 @@ program.hook('preAction', (_root, action) => {
   if (!['toon', 'json', 'text'].includes(value)) program.error('--format must be toon, json or text', { exitCode: 2 });
   configureOutput(value);
   setDryRun(Boolean(action.optsWithGlobals().dryRun));
-  if (isDryRun()) {
+  setReadOnly(Boolean(action.optsWithGlobals().readOnly));
+  if (isDryRun() || isReadOnly()) {
     let top = action; while (top.parent && top.parent !== program) top = top.parent;
-    if (!['api', 'records', 'workflow', 'agent', 'model', 'apps', 'connections', 'jobs', 'doctor', 'catalog'].includes(top.name())) action.error('--dry-run is supported for API-backed platform commands, not authentication or local setup', { exitCode: 2 });
+    if (!['fmx', 'api', 'records', 'workflow', 'agent', 'model', 'apps', 'connections', 'jobs', 'doctor', 'catalog', 'knowledge', 'access', 'metadata', 'resources', 'dashboard', 'policy'].includes(top.name())) action.error('--dry-run/--read-only are supported for API-backed platform commands, not authentication or local setup', { exitCode: 2 });
   }
 });
 // Usage failures can occur before preAction (unknown flags). Preserve the explicitly requested output format.

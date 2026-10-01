@@ -1,8 +1,13 @@
 export function actionableError(err: Error, command?: string, args: string[] = []): { help?: string; fields: Record<string, unknown> } {
-  const e = err as Error & { statusCode?: number; code?: string; details?: unknown };
+  const e = err as Error & { statusCode?: number; code?: string; details?: unknown; requestId?: string };
   const fields: Record<string, unknown> = { code: e.code ?? (e.name === 'AuthError' ? (e.message.includes('Permission denied') ? 'PERMISSION_DENIED' : 'AUTH_REQUIRED') : e.name === 'ValidationError' ? 'VALIDATION_FAILED' : e.name === 'NetworkError' ? 'NETWORK_ERROR' : 'REQUEST_FAILED') };
   if (e.statusCode !== undefined) fields.status = e.statusCode;
+  if (e.requestId) fields.requestId = e.requestId;
   if (e.details !== undefined) fields.details = e.details;
+  if (e.name === 'ValidationError' && e.message.includes('invalid JSON response')) {
+    fields.code = 'INVALID_RESPONSE'; fields.operationState = 'unknown';
+    return { fields, help: 'Inspect the remote state before repeating a mutation; the response could not be decoded.' };
+  }
   const tenantIndex = args.indexOf('--tenant');
   // Suggestions never interpolate arbitrary user input into shell command text.
   const tenant = tenantIndex >= 0 ? args[tenantIndex + 1] : undefined;
@@ -15,7 +20,7 @@ export function actionableError(err: Error, command?: string, args: string[] = [
     fields.code = 'DEPENDENT_RECORDS_EXIST'; fields.retryable = false;
     return { fields, help: `Inspect fmx workflow versions <id>${suffix} and dependent records. Transactional deletion requires platform support; no dependent records were deleted by FMX.` };
   }
-  if (e.name === 'AuthError') return { fields, help: e.message.includes('Permission denied') ? 'Verify the account permissions and selected tenant; logging in again does not grant permissions.' : 'fmx auth login --device --tenant <tenant-uuid>' };
+  if (e.name === 'AuthError') return { fields, help: e.message.includes('Permission denied') ? 'Verify the account permissions and selected tenant; logging in again does not grant permissions.' : process.env.FLUXOMIND_ACCESS_TOKEN ? 'Provide a valid FLUXOMIND_ACCESS_TOKEN or unset it to use a saved device-login session.' : 'fmx auth login --device --tenant <tenant-uuid>' };
   if (e.statusCode === 429) return { fields, help: 'Wait for the platform rate limit to clear. Mutations are not retried automatically.' };
   if (e.statusCode === 409) return { fields, help: `Read the current record with fmx records get <object> <id>${suffix} and reconcile the conflict before retrying.` };
   if (e.name === 'NetworkError' || e.name === 'AbortError' || e.statusCode && e.statusCode >= 500) {

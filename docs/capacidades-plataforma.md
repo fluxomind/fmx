@@ -95,4 +95,6 @@ No tenant autenticado foram validadas leituras de registros e agentes, metadata 
 
 Essa versão amplia a CLI de fato, mas não declara paridade integral com o MCP. `/api/v1/tools` usa um catálogo de exemplo (calculator/echo), então não foi usado como ponte para a ToolRegistry real. Modelagem especial de objetos, composição de páginas/apps, governança e integrações ainda precisam de comandos próprios e contratos validados. `api` permite usar APIs JSON existentes com autenticação, mas não cria endpoints nem garante compatibilidade com todas as ferramentas MCP. A rota enriched schema também retornou 500 no teste real e não foi promovida como um comando funcional.
 
-A versão 0.4.0-alpha.3 acrescenta controles para agentes e comandos adicionais. Consulte [contratos e limites da versão](agent-workflows.md). Nesta etapa, toda validação foi local; nenhuma chamada ao tenant de produção.
+A versão 0.4.0-alpha.3 acrescenta controles para agentes e comandos adicionais. Consulte [contratos e limites da versão](agent-workflows.md). A validação incluiu fixtures locais, consultas autenticadas e dry runs; nenhuma escrita de recurso no tenant.
+
+A versão 0.4.0-alpha.4 amplia os serviços de domínio, capabilities, contexto vivo e planos declarativos. Consulte [contratos, provas e limites](agent-platform.md).
