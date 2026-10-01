@@ -20,7 +20,9 @@ describe('AXI executable contract', () => {
   });
   it('rejects a device-login tenant slug before authentication', () => {
     const result = run('--format', 'json', 'auth', 'login', '--device', '--tenant', 'platform');
-    expect(result.status).toBe(2); expect(JSON.parse(result.stdout).error).toContain('tenant-uuid'); expect(result.stderr).toBe('');
+    expect(result.status).toBe(2); expect(JSON.parse(result.stdout).error).toContain('tenant-uuid');
+    // Node 22.12 emits a require(ESM) warning; stderr may contain runtime diagnostics.
+    expect(result.stderr).not.toMatch(/Initiating device authorization|Open in a browser|Enter code:/);
   });
   it('blocks reading credentials through the public config command', () => {
     const result = run('--format', 'json', 'config', 'get', 'auth'); expect(result.status).toBe(2);
