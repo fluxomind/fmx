@@ -64,6 +64,7 @@ export interface DriftReport {
 export type MergeStrategy = 'merge' | 'overwrite' | 'skip';
 
 export interface SetupOptions {
+  interactive?: boolean;
   force: boolean;
   skipSmoke: boolean;
   aiClients?: AiClient[];

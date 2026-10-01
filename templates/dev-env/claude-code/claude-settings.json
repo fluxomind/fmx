@@ -1,6 +1,12 @@
 {
   "permissions": {
-    "allow": ["Bash(fmx:*)", "Bash(git:*)", "Bash(npm:*)"]
+    "allow": [
+      "Bash(fmx:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)"
+    ]
   },
-  "enabledMcpjsonServers": ["fluxomind"]
+  "enabledMcpjsonServers": [
+    "fluxomind"
+  ]
 }

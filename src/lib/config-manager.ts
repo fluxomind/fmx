@@ -10,7 +10,7 @@ import { homedir } from 'os';
 export interface FmxConfig {
   defaultTenant?: string;
   apiBaseUrl: string;
-  outputFormat: 'text' | 'json';
+  outputFormat: 'text' | 'json' | 'toon';
   /** Encrypted blob (AES-256-GCM) containing StoredAuth. Managed by auth-manager. */
   auth?: string;
 }
@@ -23,7 +23,7 @@ export const API_URL_ENV_VAR = 'FLUXOMIND_API_URL';
 
 const DEFAULT_CONFIG: FmxConfig = {
   apiBaseUrl: DEFAULT_API_BASE_URL,
-  outputFormat: 'text',
+  outputFormat: 'toon',
 };
 
 function ensureDir(): void {

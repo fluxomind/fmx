@@ -13,11 +13,10 @@ function loadJson(relPath: string): Record<string, unknown> {
 }
 
 describe('static templates', () => {
-  it('vscode/mcp.json has servers.fluxomind with command fmx and args [mcp, serve]', () => {
+  it('vscode/mcp.json has servers.fluxomind with the remote HTTP endpoint', () => {
     const t = loadJson('vscode/mcp.json');
     const server = (t.servers as Record<string, { command: string; args: string[] }>).fluxomind;
-    expect(server.command).toBe('fmx');
-    expect(server.args).toEqual(['mcp', 'serve']);
+    expect(server).toEqual({ type: 'http', url: 'https://platform.fluxomind.com/api/mcp' });
   });
 
   it('cursor/mcp.json uses mcpServers root', () => {

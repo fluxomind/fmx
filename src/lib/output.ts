@@ -1,52 +1,32 @@
-/**
- * Output formatting — CI detection, NO_COLOR, chalk/ora wrappers
- * @package @fluxomind/cli
- */
-
-const isCI = process.env.CI === 'true' || !process.stdout.isTTY;
-const noColor = process.env.NO_COLOR !== undefined;
-
+/** Structured CLI output. MCP stdio is deliberately a separate protocol. */
+import { createRequire } from 'node:module';
+const nativeRequire = createRequire(__filename);
+let format: 'toon' | 'json' | 'text' = 'toon';
+export function configureOutput(value: 'toon' | 'json' | 'text'): void {
+  format = value;
+}
+export function print(value: unknown): void {
+  const serialized = format === 'json' ? JSON.stringify(value) :
+    (nativeRequire('@toon-format/toon') as { encode(value: unknown): string }).encode(value);
+  process.stdout.write(serialized + '\n');
+}
 export function isInteractive(): boolean {
-  return !isCI;
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY && process.env.CI !== 'true');
 }
-
 export function supportsColor(): boolean {
-  return !noColor && !isCI;
+  return isInteractive() && process.env.NO_COLOR === undefined && format === 'text';
 }
-
 export function success(msg: string): void {
-  console.log(supportsColor() ? `\x1b[32m✓\x1b[0m ${msg}` : `OK ${msg}`);
+  if (format === 'text') console.log(`OK ${msg}`);
+  else print({ ok: true, message: msg });
 }
-
-export function error(msg: string): void {
-  console.error(supportsColor() ? `\x1b[31m✗\x1b[0m ${msg}` : `ERR ${msg}`);
+export function error(msg: string, help?: string): void {
+  print({ error: msg, ...(help ? { help } : {}) });
 }
-
-export function warn(msg: string): void {
-  console.warn(supportsColor() ? `\x1b[33m⚠\x1b[0m ${msg}` : `WARN ${msg}`);
-}
-
-export function info(msg: string): void {
-  console.log(supportsColor() ? `\x1b[36mℹ\x1b[0m ${msg}` : `INFO ${msg}`);
-}
-
-export function dim(msg: string): string {
-  return supportsColor() ? `\x1b[2m${msg}\x1b[0m` : msg;
-}
-
-export function bold(msg: string): string {
-  return supportsColor() ? `\x1b[1m${msg}\x1b[0m` : msg;
-}
-
+export function warn(msg: string): void { process.stderr.write(`WARN ${msg}\n`); }
+export function info(msg: string): void { process.stderr.write(`INFO ${msg}\n`); }
+export function dim(msg: string): string { return supportsColor() ? `\x1b[2m${msg}\x1b[0m` : msg; }
+export function bold(msg: string): string { return supportsColor() ? `\x1b[1m${msg}\x1b[0m` : msg; }
 export function table(rows: Record<string, string>[]): void {
-  if (rows.length === 0) return;
-  const keys = Object.keys(rows[0]);
-  const widths = keys.map((k) => Math.max(k.length, ...rows.map((r) => String(r[k] ?? '').length)));
-  const header = keys.map((k, i) => k.padEnd(widths[i])).join('  ');
-  const separator = widths.map((w) => '-'.repeat(w)).join('  ');
-  console.log(header);
-  console.log(separator);
-  for (const row of rows) {
-    console.log(keys.map((k, i) => String(row[k] ?? '').padEnd(widths[i])).join('  '));
-  }
+  print({ count: rows.length, rows });
 }

@@ -12,16 +12,13 @@ export interface WatcherOptions {
   onChange: (changedFiles: string[]) => void | Promise<void>;
 }
 
-const IGNORE_PATTERNS = [
-  '**/node_modules/**',
-  '**/.git/**',
-  '**/.cache/**',
-  '**/dist/**',
-  '**/*.log',
-  '**/.env*',
-  '**/.DS_Store',
-  '**/coverage/**',
-];
+// Chokidar 4 does not expand globs. Match path segments instead.
+export function ignoredPath(path: string): boolean {
+  const segments = path.replace(/\\/g, '/').split('/');
+  const name = segments.at(-1) ?? '';
+  return segments.some((part) => ['node_modules', '.git', '.cache', 'dist', 'coverage'].includes(part))
+    || name.endsWith('.log') || name.startsWith('.env') || name === '.DS_Store';
+}
 
 const RELEVANT_EXTENSIONS = /\.(ts|tsx|js|jsx|json|toml)$/;
 
@@ -36,7 +33,7 @@ export class FileWatcher {
     const debounceMs = this.options.debounceMs ?? 300;
 
     this.watcher = watch(this.options.dir, {
-      ignored: IGNORE_PATTERNS,
+      ignored: ignoredPath,
       persistent: true,
       ignoreInitial: true,
     });

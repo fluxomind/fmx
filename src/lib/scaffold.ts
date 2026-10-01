@@ -49,7 +49,7 @@ export class ScaffoldError extends Error {
 export const README_PLACEHOLDER = '{EXTENSION_NAME}';
 
 /**
- * Resolve the packaged `templates/scaffold/` directory. In dev (tsc + ts-jest) this
+ * Resolve the packaged `templates/scaffold/` directory. In dev (tsc + Vitest) this
  * file lives at `src/lib/scaffold.ts`; in published npm, it lives at
  * `dist/lib/scaffold.js`. Both resolve to `<package>/templates/scaffold` via `../../`.
  */

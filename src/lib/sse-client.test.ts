@@ -1,7 +1,8 @@
+import { vi, type Mock } from 'vitest';
 import { SSEClient } from './sse-client';
 
-jest.mock('./auth-manager', () => ({ getAuthToken: () => 'token' }));
-jest.mock('./config-manager', () => ({ resolveApiUrl: () => 'https://api.example.test' }));
+vi.mock('./auth-manager', () => ({ getAuthToken: () => 'token' }));
+vi.mock('./config-manager', () => ({ resolveApiUrl: () => 'https://api.example.test' }));
 
 function responseFromChunks(chunks: string[]): Response {
   const encoder = new TextEncoder();
@@ -15,18 +16,18 @@ function responseFromChunks(chunks: string[]): Response {
 
 describe('SSEClient — BUG-350 bounded stream contract', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
-    global.fetch = jest.fn();
+    vi.useFakeTimers();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('preserves event state when a frame is split across network chunks', async () => {
-    const onMessage = jest.fn();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(responseFromChunks([
+    const onMessage = vi.fn();
+    (global.fetch as Mock).mockResolvedValueOnce(responseFromChunks([
       'id: log-1\nevent: lo',
       'g\ndata: {"message":"real"}\n',
       '\n',
@@ -39,8 +40,8 @@ describe('SSEClient — BUG-350 bounded stream contract', () => {
   });
 
   it('reconnects after bounded EOF using Last-Event-ID', async () => {
-    const onMessage = jest.fn();
-    (global.fetch as jest.Mock)
+    const onMessage = vi.fn();
+    (global.fetch as Mock)
       .mockResolvedValueOnce(responseFromChunks(['id: log-1\nevent: log\ndata: {}\n\n']))
       .mockImplementationOnce((_url: string, init: { signal: AbortSignal }) => new Response(new ReadableStream({
         start(controller) {
@@ -54,7 +55,7 @@ describe('SSEClient — BUG-350 bounded stream contract', () => {
     const connecting = client.connect();
     await Promise.resolve();
     await Promise.resolve();
-    await jest.runOnlyPendingTimersAsync();
+    await vi.runOnlyPendingTimersAsync();
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenNthCalledWith(2, expect.any(String), expect.objectContaining({

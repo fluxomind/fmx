@@ -86,17 +86,17 @@ log_ok "OS detected: $OS"
 pass
 
 # ---------------------------------------------------------------------------
-# FATAL — Node.js >=18
+# FATAL — Node.js >=22.12
 # ---------------------------------------------------------------------------
 log_hdr "Required"
 if command -v node >/dev/null 2>&1; then
   NODE_VERSION=$(node -v 2>/dev/null | sed 's/^v//')
   NODE_MAJOR=$(printf '%s' "$NODE_VERSION" | cut -d. -f1)
-  if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -ge 18 ] 2>/dev/null; then
+  if node -e "const [major,minor]=process.versions.node.split('.').map(Number); process.exit(major>22 || (major===22 && minor>=12) ? 0 : 1)"; then
     log_ok "Node.js v${NODE_VERSION}"
     pass
   else
-    log_fail "Node.js v${NODE_VERSION} encontrado; requer >=18"
+    log_fail "Node.js v${NODE_VERSION} encontrado; requer >=22.12"
     log_info "Install: https://nodejs.org/ (recomendado via nvm/fnm)"
     FATAL_FAIL=1
     fail

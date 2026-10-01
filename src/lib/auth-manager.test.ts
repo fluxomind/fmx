@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest';
 /**
  * Tests for auth-manager — consolidação e migration legacy (EVO-394 CA-1 + CA-17).
  */
@@ -6,13 +7,13 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-const FAKE_HOME = join(tmpdir(), `fmx-test-home-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+const { FAKE_HOME } = vi.hoisted(() => ({ FAKE_HOME: `/tmp/fmx-test-home-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
 const FAKE_FMX_DIR = join(FAKE_HOME, '.fmx');
 const FAKE_LEGACY_AUTH_PATH = join(FAKE_FMX_DIR, 'auth.json');
 
 // Mock os.homedir and os.hostname globally before any import resolves them.
-jest.mock('os', () => {
-  const actual = jest.requireActual('os');
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
   return {
     ...actual,
     homedir: () => FAKE_HOME,
@@ -31,7 +32,7 @@ afterAll(() => {
 beforeEach(() => {
   if (existsSync(FAKE_FMX_DIR)) rmSync(FAKE_FMX_DIR, { recursive: true });
   mkdirSync(FAKE_FMX_DIR, { recursive: true });
-  jest.resetModules();
+  vi.resetModules();
 });
 
 describe('auth-manager — EVO-394 migration (legacy auth.json → config.json)', () => {
@@ -51,7 +52,7 @@ describe('auth-manager — EVO-394 migration (legacy auth.json → config.json)'
       'utf-8',
     );
 
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const mod = await import('./auth-manager');
 
     const tenants = mod.getStoredTenants();
@@ -81,7 +82,7 @@ describe('auth-manager — EVO-394 migration (legacy auth.json → config.json)'
       'utf-8',
     );
 
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const mod = await import('./auth-manager');
 
     const outcome = mod.migrateLegacyAuthJson();
@@ -114,7 +115,7 @@ describe('auth-manager — EVO-394 migration (legacy auth.json → config.json)'
       'utf-8',
     );
 
-    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const mod = await import('./auth-manager');
 
     const outcome = mod.migrateLegacyAuthJson({ removeLegacy: false });

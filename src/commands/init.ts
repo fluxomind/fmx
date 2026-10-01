@@ -145,12 +145,13 @@ export const initCommand = new Command('init')
     }
 
     if (opts.public && !opts.force) {
-      const isTty = process.stdout.isTTY === true && process.env.CI !== 'true';
-      const confirmed = await confirmPublicVisibility(isTty);
-      if (!confirmed) {
-        info('Aborted — repo remains private by default. Re-run without --public.');
-        process.exit(0);
-      }
+      initCommand.error('Public repositories require explicit --public --force', { exitCode: 2 });
+    }
+    if (opts.git && !['github', 'link'].includes(opts.gitProvider ?? 'github')) {
+      initCommand.error('Supported --git-provider values: github, link (gitlab is not implemented)', { exitCode: 2 });
+    }
+    if (opts.git && opts.gitProvider === 'link' && !opts.gitTarget) {
+      initCommand.error('--git-provider link requires --git-target <url>', { exitCode: 2 });
     }
 
     const visibility: 'private' | 'public' = opts.public ? 'public' : 'private';

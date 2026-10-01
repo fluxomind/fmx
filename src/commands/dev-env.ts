@@ -193,9 +193,9 @@ async function runSmokeTest(workspaceDir: string): Promise<{ ok: boolean; elapse
 
 async function runSetup(options: SetupOptions, workspaceDir: string): Promise<void> {
   const startedAt = Date.now();
-  const interactive = options.aiClients === undefined;
+  const interactive = options.interactive === true;
 
-  console.log(bold('\nFluxomind dev-env setup\n'));
+  info(bold('\nFluxomind dev-env setup\n'));
 
   const preflight = await runPreflight();
   for (const blocker of preflight.blockers) error(blocker);
@@ -304,9 +304,9 @@ async function runSetup(options: SetupOptions, workspaceDir: string): Promise<vo
     smokeElapsedMs,
   });
 
-  console.log('');
-  console.log(bold(`Deploy em ${smokeElapsedMs != null ? (smokeElapsedMs / 1000).toFixed(1) + 's' : '—'} · Total wizard em ${(totalMs / 1000).toFixed(1)}s`));
-  console.log(dim('Next: open this folder in your IDE and read README-dev.md'));
+  info('');
+  info(bold(`Deploy em ${smokeElapsedMs != null ? (smokeElapsedMs / 1000).toFixed(1) + 's' : '—'} · Total wizard em ${(totalMs / 1000).toFixed(1)}s`));
+  info(dim('Next: open this folder in your IDE and read README-dev.md'));
 }
 
 interface DoctorCheck {
@@ -326,7 +326,7 @@ async function pingMcpApi(apiBase: string): Promise<boolean> {
 }
 
 async function runDoctor(workspaceDir: string): Promise<number> {
-  console.log(bold('\nFluxomind dev-env doctor\n'));
+  info(bold('\nFluxomind dev-env doctor\n'));
   const checks: DoctorCheck[] = [];
   const preflight = await runPreflight();
 
@@ -409,6 +409,7 @@ interface SetupCliOptions {
   force?: boolean;
   skipSmoke?: boolean;
   aiClients?: string;
+  interactive?: boolean;
 }
 
 export const devEnvCommand = new Command('dev-env').description(
@@ -418,19 +419,26 @@ export const devEnvCommand = new Command('dev-env').description(
 devEnvCommand
   .command('setup')
   .description('Wizard: preflight → auth → pick AI clients → generate configs → smoke test')
+  .option('--interactive', 'Opt in to interactive setup prompts')
   .option('--force', 'Overwrite existing configs without prompting')
   .option('--skip-smoke', 'Skip the final fmx init + deploy smoke test')
   .option('--ai-clients <csv>', 'CI-friendly non-interactive mode — e.g. copilot,claude-code')
-  .action(async (opts: SetupCliOptions) => {
+  .action(async (opts: SetupCliOptions, command: Command) => {
+    if (!opts.interactive && !opts.aiClients) command.error('Provide --ai-clients <csv>, or opt in with --interactive', { exitCode: 2 });
     try {
-      const parsed = parseAiClientsCsv(opts.aiClients);
+      let parsed: AiClient[];
+      try { parsed = parseAiClientsCsv(opts.aiClients); }
+      catch (err) { command.error((err as Error).message, { exitCode: 2 }); }
+      if (!opts.interactive && parsed.length === 0) command.error('--ai-clients requires at least one client', { exitCode: 2 });
       const options: SetupOptions = {
+        interactive: opts.interactive,
         force: opts.force ?? false,
         skipSmoke: opts.skipSmoke ?? false,
         aiClients: parsed.length > 0 ? parsed : undefined,
       };
       await runSetup(options, process.cwd());
     } catch (err) {
+      if ((err as { code?: string }).code?.startsWith('commander.')) throw err;
       error((err as Error).message);
       process.exit(1);
     }

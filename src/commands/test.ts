@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { createBundle } from '../lib/bundler';
 import { validateManifestLocal } from '../lib/manifest';
 import { post } from '../lib/api-client';
-import { error, info, dim } from '../lib/output';
+import { error, info, print, configureOutput } from '../lib/output';
 
 export const testCommand = new Command('test')
   .description('Run tests in the remote Deno sandbox')
@@ -33,24 +33,8 @@ export const testCommand = new Command('test')
         filter: opts.filter,
       });
 
-      for (const test of result.results) {
-        if (opts.json) {
-          console.log(JSON.stringify(test));
-          continue;
-        }
-
-        if (test.status === 'pass') {
-          console.log(`  \x1b[32m✓\x1b[0m ${test.name} ${dim(`(${test.duration}ms)`)}`);
-        } else if (test.status === 'fail') {
-          console.log(`  \x1b[31m✗\x1b[0m ${test.name}`);
-          if (test.error) console.log(`    ${test.error}`);
-        } else {
-          console.log(`  \x1b[33m-\x1b[0m ${test.name} ${dim('(skipped)')}`);
-        }
-      }
-
-      console.log('');
-      info(`${result.passed} passed, ${result.failed} failed, ${result.skipped} skipped ${dim(`(${result.duration}ms)`)}`);
+      if (opts.json) configureOutput('json');
+      print(result);
 
       if (result.failed > 0) process.exit(1);
     } catch (err) {

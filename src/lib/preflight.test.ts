@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 /**
  * Tests for preflight checker.
  */
@@ -11,9 +12,9 @@ type ExecImpl = (
   cb: ExecCallback,
 ) => void;
 
-const execMock = jest.fn<void, Parameters<ExecImpl>>();
+const { execMock } = vi.hoisted(() => ({ execMock: vi.fn<ExecImpl>() }));
 
-jest.mock('child_process', () => ({
+vi.mock('child_process', () => ({
   exec: (cmd: string, opts: { timeout: number }, cb: ExecCallback) =>
     execMock(cmd, opts, cb),
 }));
@@ -36,9 +37,9 @@ describe('runPreflight', () => {
     execMock.mockReset();
   });
 
-  it('returns abort=false when Node>=18 + npm present and warnings for missing optional tools', async () => {
+  it('returns abort=false when Node>=22.12 + npm present and warnings for missing optional tools', async () => {
     queueExecResponses({
-      'node': { stdout: 'v20.11.0\n' },
+      'node': { stdout: 'v22.12.0\n' },
       'npm': { stdout: '10.2.4\n' },
       'git': { stdout: 'git version 2.43.0\n' },
       'deno': { err: new Error('not found') },
@@ -47,13 +48,13 @@ describe('runPreflight', () => {
     const result = await runPreflight();
     expect(result.abort).toBe(false);
     expect(result.node.ok).toBe(true);
-    expect(result.node.version).toBe('20.11.0');
+    expect(result.node.version).toBe('22.12.0');
     expect(result.ollama.version).toBeNull();
     expect(result.warnings.some((w) => w.includes('ollama'))).toBe(true);
     expect(result.blockers).toHaveLength(0);
   });
 
-  it('sets abort when Node<18', async () => {
+  it('sets abort when Node<22.12', async () => {
     queueExecResponses({
       'node': { stdout: 'v16.20.0\n' },
       'npm': { stdout: '8.19.0\n' },
@@ -68,7 +69,7 @@ describe('runPreflight', () => {
 
   it('warns when git missing and continues', async () => {
     queueExecResponses({
-      'node': { stdout: 'v20.0.0\n' },
+      'node': { stdout: 'v24.0.0\n' },
       'npm': { stdout: '10.0.0\n' },
       'git': { err: new Error('x') },
       'deno': { err: new Error('x') },

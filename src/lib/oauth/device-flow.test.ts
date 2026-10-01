@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { runDeviceOAuth } from './device-flow';
 
 interface MockResponse {
@@ -39,7 +40,7 @@ describe('runDeviceOAuth', () => {
         tenantId: 'tenant-1',
       }),
     ];
-    const fetchFn = jest.fn(async () => responses.shift()!) as unknown as typeof fetch;
+    const fetchFn = vi.fn(async () => responses.shift()!) as unknown as typeof fetch;
 
     const notifications: Array<{ userCode: string }> = [];
     const tokens = await runDeviceOAuth({
@@ -75,7 +76,7 @@ describe('runDeviceOAuth', () => {
       }),
     ];
     const sleepCalls: number[] = [];
-    const fetchFn = jest.fn(async () => responses.shift()!) as unknown as typeof fetch;
+    const fetchFn = vi.fn(async () => responses.shift()!) as unknown as typeof fetch;
 
     await runDeviceOAuth({
       platformBaseUrl,
@@ -102,7 +103,7 @@ describe('runDeviceOAuth', () => {
       }),
       jsonResponse({ error: 'expired_token' }, 400),
     ];
-    const fetchFn = jest.fn(async () => responses.shift()!) as unknown as typeof fetch;
+    const fetchFn = vi.fn(async () => responses.shift()!) as unknown as typeof fetch;
 
     await expect(
       runDeviceOAuth({
@@ -126,7 +127,7 @@ describe('runDeviceOAuth', () => {
       }),
       jsonResponse({ error: 'access_denied' }, 400),
     ];
-    const fetchFn = jest.fn(async () => responses.shift()!) as unknown as typeof fetch;
+    const fetchFn = vi.fn(async () => responses.shift()!) as unknown as typeof fetch;
 
     await expect(
       runDeviceOAuth({

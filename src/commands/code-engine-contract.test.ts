@@ -1,34 +1,37 @@
+import { vi, type MockedFunction } from 'vitest';
 import { get, post } from '../lib/api-client';
 import { logsCommand } from './logs';
 import { rollbackCommand } from './rollback';
 import { statusCommand } from './status';
 
-jest.mock('../lib/api-client', () => ({ get: jest.fn(), post: jest.fn() }));
-jest.mock('../lib/output', () => ({
-  success: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
+vi.mock('../lib/api-client', () => ({ get: vi.fn(), post: vi.fn() }));
+vi.mock('../lib/output', () => ({
+  print: vi.fn(),
+  configureOutput: vi.fn(),
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
   dim: (value: string) => value,
-  table: jest.fn(),
+  table: vi.fn(),
   supportsColor: () => false,
   isInteractive: () => false,
 }));
 
-const mockedGet = get as jest.MockedFunction<typeof get>;
-const mockedPost = post as jest.MockedFunction<typeof post>;
+const mockedGet = get as MockedFunction<typeof get>;
+const mockedPost = post as MockedFunction<typeof post>;
 
 describe('CodeEngine CLI HTTP contract — BUG-350', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     process.exitCode = undefined;
     for (const option of ['list', 'force', 'json', 'deployment', 'extension']) {
       rollbackCommand.setOptionValue(option, undefined);
     }
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('status uses the explicit extension reference', async () => {

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { get } from '../lib/api-client';
-import { success, info, dim, table } from '../lib/output';
+import { print, configureOutput, error } from '../lib/output';
 import { resolveExtensionReference } from '../lib/extension-reference';
 
 export const statusCommand = new Command('status')
@@ -26,30 +26,11 @@ export const statusCommand = new Command('status')
         };
       }>(`/api/code-engine/extensions/${encodeURIComponent(id)}`);
 
-      if (opts.json) {
-        console.log(JSON.stringify(status, null, 2));
-        return;
-      }
-
-      success(`${status.name} v${status.version}`);
-      info(`  Status: ${status.status}`);
-      info(`  Triggers: ${status.triggers} active`);
-      info(`  Executions (24h): ${status.executions24h}`);
-      if (status.lastExecution) {
-        info(`  Last execution: ${dim(status.lastExecution)}`);
-      }
-
-      if (opts.metrics && status.metrics) {
-        info('\n  Metrics:');
-        table([
-          { metric: 'Latency p50', value: `${status.metrics.latencyP50}ms` },
-          { metric: 'Latency p95', value: `${status.metrics.latencyP95}ms` },
-          { metric: 'Latency p99', value: `${status.metrics.latencyP99}ms` },
-          { metric: 'Memory', value: `${status.metrics.memoryMB}MB` },
-        ]);
-      }
+      if (opts.json) configureOutput('json');
+      const { metrics, ...summary } = status;
+      print(opts.metrics ? status : summary);
     } catch (err) {
-      console.error(`Failed to get status: ${(err as Error).message}`);
+      error(`Failed to get status: ${(err as Error).message}`);
       process.exit(1);
     }
   });

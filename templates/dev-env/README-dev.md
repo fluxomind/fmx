@@ -33,7 +33,7 @@ Open this folder in VS Code / Cursor / Claude Code. The MCP server is wired — 
 - "query customer where region = 'EU'"
 - "deploy the current extension"
 
-Your AI client will call the `fmx mcp serve` stdio server with your CLI auth.
+Your AI client connects directly to https://platform.fluxomind.com/api/mcp. Complete OAuth in the client; CLI authentication is separate.
 
 ## 4. Deploy
 
@@ -62,7 +62,7 @@ You picked a preset — `fmx dev-env doctor` shows the exact list. Switch or add
 
 ## Troubleshooting
 
-- AI client can't find tools → check that `fmx mcp serve` is reachable (`fmx dev-env doctor`).
+- AI client can't find tools → check the remote MCP connection and OAuth in your AI client (`fmx dev-env doctor`).
 - Ollama missing → install from https://ollama.com and pull `qwen2.5-coder:7b`.
 - Auth expired → `fmx auth login`.
 

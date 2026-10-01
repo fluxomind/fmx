@@ -5,7 +5,7 @@
  * @package @fluxomind/cli
  */
 
-import { Command } from 'commander';
+import { Command, CommanderError } from 'commander';
 import { initCommand } from './commands/init';
 import { authCommand } from './commands/auth';
 import { devCommand } from './commands/dev';
@@ -15,20 +15,26 @@ import { logsCommand } from './commands/logs';
 import { statusCommand } from './commands/status';
 import { rollbackCommand } from './commands/rollback';
 import { configCommand } from './commands/config';
-import { mcpCommand } from './commands/mcp';
 import { devEnvCommand } from './commands/dev-env';
 import { validateCommand } from './commands/validate';
 import { publishCommand } from './commands/publish';
 import { cloneCommand } from './commands/clone';
 import { linkRepoCommand } from './commands/link-repo';
-import { error } from './lib/output';
+import { configureOutput, error } from './lib/output';
+import { VERSION } from './version';
+import { home } from './lib/home';
+import { agentsCommand } from './commands/agents';
+import { metadataCommand, queryCommand } from './commands/inspect';
+import { loadConfig } from './lib/config-manager';
 
 const program = new Command();
 
 program
   .name('fmx')
   .description('Fluxomind Platform CLI — create, develop, deploy and manage extensions')
-  .version('0.3.0-alpha.4');
+  .version(VERSION)
+  .option('--format <format>', 'Output format: toon, json, text', 'toon')
+  .action(home);
 
 program.addCommand(initCommand);
 program.addCommand(authCommand);
@@ -39,14 +45,36 @@ program.addCommand(logsCommand);
 program.addCommand(statusCommand);
 program.addCommand(rollbackCommand);
 program.addCommand(configCommand);
-program.addCommand(mcpCommand);
 program.addCommand(devEnvCommand);
 program.addCommand(validateCommand);
 program.addCommand(publishCommand);
 program.addCommand(cloneCommand);
 program.addCommand(linkRepoCommand);
 
+program.addCommand(agentsCommand);
+program.addCommand(metadataCommand);
+program.addCommand(queryCommand);
+let usageHelp: string | undefined;
+function configure(command: Command): void {
+  command.exitOverride();
+  command.configureOutput({ writeErr: () => undefined, outputError: () => { usageHelp = command.helpInformation(); } });
+  for (const child of command.commands) configure(child);
+}
+configure(program);
+program.hook('preAction', () => {
+  const requested = program.opts().format;
+  const stored = loadConfig().outputFormat;
+  const value = program.getOptionValueSource('format') === 'cli' ? requested : (stored === 'text' ? 'toon' : stored);
+  if (!['toon', 'json', 'text'].includes(value)) program.error('--format must be toon, json or text', { exitCode: 2 });
+  configureOutput(value);
+});
+// Usage failures can occur before preAction (unknown flags). Preserve the explicitly requested output format.
+const formatIndex = process.argv.indexOf('--format');
+configureOutput(formatIndex >= 0 && process.argv[formatIndex + 1] === 'json' || process.argv.includes('--format=json') || process.argv.includes('--json') ? 'json' : 'toon');
 program.parseAsync(process.argv).catch((err: Error) => {
-  error(err.message);
-  process.exit(1);
+  if (err instanceof CommanderError && err.exitCode === 0) return;
+  const usage = err instanceof CommanderError || err.name === 'InvalidArgumentError';
+  error(err.message, usage ? usageHelp ?? 'Use the command with --help to see valid arguments and flags.' :
+    err.name === 'AuthError' ? 'fmx auth login --device --tenant <tenant-uuid>' : undefined);
+  process.exitCode = usage ? 2 : 1;
 });

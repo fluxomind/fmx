@@ -3,7 +3,7 @@ import { saveTokens, getAuthStatus, clearAuth, getStoredTenants, migrateLegacyAu
 import { resolveApiUrl } from '../lib/config-manager';
 import { runBrowserOAuth } from '../lib/oauth/browser-flow';
 import { runDeviceOAuth } from '../lib/oauth/device-flow';
-import { success, error, info, dim } from '../lib/output';
+import { success, error, info, print } from '../lib/output';
 
 interface ExchangeResponse {
   accessToken: string;
@@ -45,10 +45,13 @@ export const authCommand = new Command('auth').description('Authenticate with Fl
 authCommand
   .command('login')
   .description('Login via browser OAuth flow (default) or device code flow')
-  .option('--tenant <name>', 'Tenant to authenticate with')
+  .option('--tenant <uuid>', 'Tenant UUID (required for --device)')
   .option('--device', 'Use device code flow (for environments without a browser)')
   .option('--api-url <url>', 'Override platform API base URL (precedence over env + config file)')
-  .action(async (opts: { tenant?: string; device?: boolean; apiUrl?: string }) => {
+  .action(async (opts: { tenant?: string; device?: boolean; apiUrl?: string }, command: Command) => {
+    if (opts.device && (!opts.tenant || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(opts.tenant))) {
+      command.error('--device requires --tenant <tenant-uuid>; tenant names cause tenant_mismatch', { exitCode: 2 });
+    }
     const tenant = opts.tenant ?? 'default';
     const apiBaseUrl = resolveApiUrl(opts.apiUrl);
 
@@ -120,21 +123,8 @@ authCommand
   .description('Show current authentication status')
   .action(() => {
     const tenants = getStoredTenants();
-    if (tenants.length === 0) {
-      info('Not authenticated. Run: fmx auth login');
-      return;
-    }
-
-    for (const tenant of tenants) {
+    print({ count: tenants.length, tenants: tenants.map(tenant => {
       const status = getAuthStatus(tenant);
-      if (status.authenticated) {
-        success(`${tenant}: authenticated${status.email ? ` (${status.email})` : ''}`);
-        if (status.expiresAt) {
-          const remaining = Math.max(0, status.expiresAt - Date.now());
-          info(`  Expires in: ${dim(Math.round(remaining / 60_000) + ' minutes')}`);
-        }
-      } else {
-        info(`${tenant}: expired or invalid`);
-      }
-    }
+      return { tenant, authenticated: status.authenticated, expiresAt: status.expiresAt ?? null };
+    }), ...(tenants.length === 0 ? { help: 'fmx auth login --device --tenant <tenant-uuid>' } : {}) });
   });

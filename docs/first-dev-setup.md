@@ -22,7 +22,7 @@ Anote o horario agora. Ao terminar o passo 8, confirme: foi menos de 30 minutos?
 
 | Item | Como verificar | Obrigatorio? |
 |------|----------------|--------------|
-| Node.js >= 18 | `node -v` | **Sim** |
+| Node.js >= 22.12 | `node -v` | **Sim** |
 | npm | `npm -v` | **Sim** (vem com Node) |
 | git | `git --version` | Recomendado (necessario para `fmx init --git`) |
 | 1 AI client | VS Code + Copilot / Cursor / Claude Code / Continue + Ollama / Continue + Anthropic | **Sim** (1 dos 5) |
@@ -127,7 +127,7 @@ mkdir -p .claude
 cp $(npm root -g)/@fluxomind/cli/setup/configs/claude-code/settings.json .claude/
 ```
 
-Rode `claude` no terminal. Claude Code detecta MCP Fluxomind; use `/list-mcp-tools` para ver as 6 tools.
+Rode `claude` no terminal. Claude Code detecta MCP Fluxomind; use `/list-mcp-tools` para ver as tools expostas pelo endpoint remoto.
 
 ### Opcao D — Cursor
 
@@ -151,7 +151,7 @@ API key e resolvida **por env var** — nunca escrita no arquivo `config.json`.
 ## 7. Validar MCP local
 
 ```bash
-fmx mcp serve &
+# Connect your AI client to https://platform.fluxomind.com/api/mcp and complete OAuth.
 # em outro terminal — valide que o AI client ve as tools:
 #   Copilot Chat: "/list-mcp-tools" ou "@fluxomind tools"
 #   Claude Code:  "/list-mcp-tools"

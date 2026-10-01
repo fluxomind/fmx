@@ -8,7 +8,11 @@ import { totalmem } from 'os';
 import type { PreflightResult, PreflightVersion } from './types/dev-env';
 
 const EXEC_TIMEOUT_MS = 2_000;
-const NODE_MIN_MAJOR = 18;
+const NODE_MIN_MAJOR = 22;
+export function supportedNode(version: string): boolean {
+  const [major, minor] = version.split('.').map(Number);
+  return major > 22 || (major === 22 && minor >= 12);
+}
 
 interface ToolSpec {
   name: string;
@@ -54,7 +58,7 @@ async function probeTool(tool: ToolSpec): Promise<{ result: PreflightVersion; ma
   const raw = await probe(tool.command);
   if (!raw) return { result: { version: null, raw: null, ok: !tool.required }, major: null };
   const { version, major } = parseVersion(raw);
-  const ok = version !== null && (!tool.minMajor || (major !== null && major >= tool.minMajor));
+  const ok = version !== null && (tool.name === 'node' ? supportedNode(version) : (!tool.minMajor || (major !== null && major >= tool.minMajor)));
   return { result: { version, raw, ok }, major };
 }
 
@@ -66,9 +70,9 @@ export async function runPreflight(): Promise<PreflightResult> {
   const warnings: string[] = [];
 
   if (!node.result.version) {
-    blockers.push('Node.js not detected. Install Node >= 18 from https://nodejs.org');
-  } else if (node.major !== null && node.major < NODE_MIN_MAJOR) {
-    blockers.push(`Node ${node.result.version} detected. Fluxomind CLI requires Node >= ${NODE_MIN_MAJOR}.`);
+    blockers.push('Node.js not detected. Install Node >= 22.12 from https://nodejs.org');
+  } else if (!node.result.ok) {
+    blockers.push(`Node ${node.result.version} detected. Fluxomind CLI requires Node >= 22.12.`);
   }
 
   if (!npm.result.version) {

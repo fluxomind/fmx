@@ -1,3 +1,4 @@
+import { print } from '../lib/output';
 import { Command } from 'commander';
 import { FileWatcher } from '../lib/watcher';
 import { createIncrementalBundle } from '../lib/bundler';
@@ -39,9 +40,9 @@ export const devCommand = new Command('dev')
         if (event !== 'log') return;
         try {
           const log = JSON.parse(data);
-          console.log(`${dim(log.timestamp ?? '')} [${log.level ?? 'info'}] ${log.message ?? data}`);
+          print({ log });
         } catch {
-          console.log(data);
+          print({ message: data });
         }
       },
       reconnectOnEof: true,

@@ -10,8 +10,8 @@ export function generateVscodeMcpJson(): Record<string, unknown> {
   return {
     servers: {
       fluxomind: {
-        command: 'fmx',
-        args: ['mcp', 'serve'],
+        type: 'http',
+        url: 'https://platform.fluxomind.com/api/mcp',
       },
     },
   };

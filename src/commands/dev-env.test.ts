@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 /**
  * Integration tests for `fmx dev-env` — setup non-interactive + doctor + merge.
  */
@@ -6,22 +7,22 @@ import { mkdtempSync, rmSync, writeFileSync, existsSync, readFileSync, mkdirSync
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-jest.mock('../lib/auth-manager', () => ({
-  getAuthStatus: jest.fn(() => ({ authenticated: true, tenant: 'core_template', email: 'dev@example.com' })),
-  getAuthToken: jest.fn(() => 'test-token'),
-  getStoredTenants: jest.fn(() => ['core_template']),
-  getTenantAuth: jest.fn(() => ({ accessToken: 'test-token' })),
+vi.mock('../lib/auth-manager', () => ({
+  getAuthStatus: vi.fn(() => ({ authenticated: true, tenant: 'core_template', email: 'dev@example.com' })),
+  getAuthToken: vi.fn(() => 'test-token'),
+  getStoredTenants: vi.fn(() => ['core_template']),
+  getTenantAuth: vi.fn(() => ({ accessToken: 'test-token' })),
 }));
 
-jest.mock('../lib/config-manager', () => ({
-  loadConfig: jest.fn(() => ({ apiBaseUrl: 'http://localhost:3000', outputFormat: 'text' })),
-  getConfigPath: jest.fn(() => '/tmp/fake-config.json'),
-  getConfigDir: jest.fn(() => '/tmp/fake-dir'),
-  resolveApiUrl: jest.fn(() => 'http://localhost:3000'),
+vi.mock('../lib/config-manager', () => ({
+  loadConfig: vi.fn(() => ({ apiBaseUrl: 'http://localhost:3000', outputFormat: 'text' })),
+  getConfigPath: vi.fn(() => '/tmp/fake-config.json'),
+  getConfigDir: vi.fn(() => '/tmp/fake-dir'),
+  resolveApiUrl: vi.fn(() => 'http://localhost:3000'),
 }));
 
-jest.mock('../lib/preflight', () => ({
-  runPreflight: jest.fn(async () => ({
+vi.mock('../lib/preflight', () => ({
+  runPreflight: vi.fn(async () => ({
     node: { version: '20.0.0', raw: 'v20.0.0', ok: true },
     npm: { version: '10.0.0', raw: '10.0.0', ok: true },
     git: { version: '2.40.0', raw: 'git version 2.40.0', ok: true },
@@ -32,19 +33,19 @@ jest.mock('../lib/preflight', () => ({
     blockers: [],
     warnings: [],
   })),
-  ramToolingHint: jest.fn((ramGb: number) => ({
+  ramToolingHint: vi.fn((ramGb: number) => ({
     recommendedModel: ramGb < 8 ? 'qwen2.5-coder:1.5b' : 'qwen2.5-coder:7b',
   })),
 }));
 
-jest.mock('../lib/dev-env-metrics', () => ({
-  incrementWizardCompletion: jest.fn(),
-  incrementPresetSelections: jest.fn(),
-  recordDevEnvLog: jest.fn(),
+vi.mock('../lib/dev-env-metrics', () => ({
+  incrementWizardCompletion: vi.fn(),
+  incrementPresetSelections: vi.fn(),
+  recordDevEnvLog: vi.fn(),
 }));
 
-jest.mock('child_process', () => ({
-  spawnSync: jest.fn(() => ({ status: 0, stdout: Buffer.from('ok'), stderr: Buffer.from('') })),
+vi.mock('child_process', () => ({
+  spawnSync: vi.fn(() => ({ status: 0, stdout: Buffer.from('ok'), stderr: Buffer.from('') })),
 }));
 
 let workDir: string;
@@ -59,13 +60,13 @@ beforeEach(() => {
 afterEach(() => {
   process.chdir(originalCwd);
   rmSync(workDir, { recursive: true, force: true });
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('fmx dev-env setup (non-interactive)', () => {
   it('generates configs for copilot + cursor without prompts and writes lock file', async () => {
     const { devEnvCommand } = await import('./dev-env');
-    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -86,11 +87,11 @@ describe('fmx dev-env setup (non-interactive)', () => {
     expect(existsSync(join(workDir, '.fluxomind/dev-env.lock.json'))).toBe(true);
 
     const vsMcp = JSON.parse(readFileSync(join(workDir, '.vscode/mcp.json'), 'utf-8'));
-    expect(vsMcp.servers.fluxomind.command).toBe('fmx');
-    expect(vsMcp.servers.fluxomind.args).toEqual(['mcp', 'serve']);
+    expect(vsMcp.servers.fluxomind.type).toBe('http');
+    expect(vsMcp.servers.fluxomind.url).toBe('https://platform.fluxomind.com/api/mcp');
 
     const cursorMcp = JSON.parse(readFileSync(join(workDir, '.cursor/mcp.json'), 'utf-8'));
-    expect(cursorMcp.mcpServers.fluxomind.command).toBe('fmx');
+    expect(cursorMcp.mcpServers.fluxomind.url).toBe('https://platform.fluxomind.com/api/mcp');
 
     const lock = JSON.parse(readFileSync(join(workDir, '.fluxomind/dev-env.lock.json'), 'utf-8'));
     expect(lock.aiClients.sort()).toEqual(['copilot', 'cursor']);
@@ -108,7 +109,7 @@ describe('fmx dev-env setup (non-interactive)', () => {
     );
 
     const { devEnvCommand } = await import('./dev-env');
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -130,7 +131,7 @@ describe('fmx dev-env setup (non-interactive)', () => {
 
   it('generates Claude Code preset with both .mcp.json and .claude/settings.json', async () => {
     const { devEnvCommand } = await import('./dev-env');
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -152,7 +153,7 @@ describe('fmx dev-env setup (non-interactive)', () => {
 
   it('uses Ollama template with localhost for continue-ollama preset', async () => {
     const { devEnvCommand } = await import('./dev-env');
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -167,12 +168,12 @@ describe('fmx dev-env setup (non-interactive)', () => {
 
     const cfg = JSON.parse(readFileSync(join(workDir, '.continue/config.json'), 'utf-8'));
     expect(cfg.models[0].apiBase).toBe('http://localhost:11434');
-    expect(cfg.mcpServers[0].command).toBe('fmx');
+    expect(cfg.mcpServers[0]).toMatchObject({ type: 'streamable-http', url: 'https://platform.fluxomind.com/api/mcp' });
   });
 
   it('rejects unknown AI client', async () => {
     const { devEnvCommand } = await import('./dev-env');
-    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -188,7 +189,7 @@ describe('fmx dev-env doctor', () => {
   it('exits 0 when environment is healthy and lock file present', async () => {
     const { devEnvCommand } = await import('./dev-env');
 
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -201,11 +202,11 @@ describe('fmx dev-env doctor', () => {
       '--skip-smoke',
     ]);
 
-    const doctorExit = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    const doctorExit = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
-    global.fetch = jest.fn(async () => ({ ok: true })) as unknown as typeof fetch;
+    global.fetch = vi.fn(async () => ({ ok: true })) as unknown as typeof fetch;
 
     await expect(devEnvCommand.parseAsync(['node', 'fmx', 'doctor'])).rejects.toThrow(/__exit\(0\)/);
     expect(doctorExit).toHaveBeenCalledWith(0);
@@ -214,7 +215,7 @@ describe('fmx dev-env doctor', () => {
   it('exits 1 when lock file points to missing config', async () => {
     const { devEnvCommand } = await import('./dev-env');
 
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -229,9 +230,9 @@ describe('fmx dev-env doctor', () => {
 
     rmSync(join(workDir, '.vscode/mcp.json'), { force: true });
 
-    global.fetch = jest.fn(async () => ({ ok: true })) as unknown as typeof fetch;
+    global.fetch = vi.fn(async () => ({ ok: true })) as unknown as typeof fetch;
 
-    const doctorExit = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    const doctorExit = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -240,10 +241,10 @@ describe('fmx dev-env doctor', () => {
   });
 });
 
-describe('fmx mcp serve wire-up (D9)', () => {
-  it('generated configs invoke `fmx mcp serve` as command+args — matches GAP-180 delivery', async () => {
+describe('remote MCP configuration', () => {
+  it('generated configs point to the remote MCP endpoint', async () => {
     const { devEnvCommand } = await import('./dev-env');
-    jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
       throw new Error(`__exit(${code ?? 0})`);
     }) as never);
 
@@ -265,8 +266,8 @@ describe('fmx mcp serve wire-up (D9)', () => {
     for (const { path, pick } of inspections) {
       const cfg = JSON.parse(readFileSync(join(workDir, path), 'utf-8')) as Record<string, unknown>;
       const entry = pick(cfg);
-      expect(entry.command).toBe('fmx');
-      expect(entry.args).toEqual(['mcp', 'serve']);
+      expect(entry).toMatchObject({ url: 'https://platform.fluxomind.com/api/mcp' });
+      expect(entry).not.toHaveProperty('command');
     }
   });
 });

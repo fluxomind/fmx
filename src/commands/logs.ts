@@ -1,31 +1,15 @@
 import { Command } from 'commander';
 import { get } from '../lib/api-client';
 import { SSEClient } from '../lib/sse-client';
-import { info, dim, error as errOut } from '../lib/output';
+import { info, print, configureOutput, error as errOut } from '../lib/output';
 import { supportsColor } from '../lib/output';
 import { resolveExtensionReference } from '../lib/extension-reference';
 
-const LEVEL_COLORS: Record<string, string> = {
-  error: '\x1b[31m',
-  warn: '\x1b[33m',
-  info: '\x1b[36m',
-  debug: '\x1b[2m',
-};
-
 function formatLog(data: string, json: boolean): void {
-  if (json) {
-    console.log(data);
-    return;
-  }
-
-  try {
-    const log = JSON.parse(data);
-    const color = supportsColor() ? (LEVEL_COLORS[log.level] ?? '') : '';
-    const reset = supportsColor() ? '\x1b[0m' : '';
-    console.log(`${dim(log.timestamp ?? '')} ${color}[${log.level ?? 'info'}]${reset} ${log.message ?? data}`);
-  } catch {
-    console.log(data);
-  }
+  if (json) configureOutput('json');
+  let log: unknown;
+  try { log = JSON.parse(data); } catch { log = { message: data }; }
+  print(log);
 }
 
 export const logsCommand = new Command('logs')
@@ -78,9 +62,8 @@ export const logsCommand = new Command('logs')
     } else {
       try {
         const logs = await get<Array<Record<string, unknown>>>(`/api/code-engine/logs?${params.toString()}`);
-        for (const log of logs) {
-          formatLog(JSON.stringify(log), !!opts.json);
-        }
+        if (opts.json) configureOutput('json');
+        print({ count: logs.length, logs });
       } catch (err) {
         errOut(`Failed to fetch logs: ${(err as Error).message}`);
         process.exit(1);

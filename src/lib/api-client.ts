@@ -74,10 +74,11 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
   const url = `${resolveApiUrl()}${options.path}`;
   const timeout = options.timeout ?? (options.path.includes('deploy') ? DEPLOY_TIMEOUT : DEFAULT_TIMEOUT);
 
+  const idempotencyKey = randomUUID();
   const buildHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Idempotency-Key': randomUUID(),
+      'Idempotency-Key': idempotencyKey,
       ...options.headers,
     };
     const token = targetTenant ? getTenantAuth(targetTenant)?.accessToken ?? null : getAuthToken();
@@ -92,7 +93,7 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
       return await fetch(url, {
         method: options.method,
         headers,
-        body: options.body ? JSON.stringify(options.body) : undefined,
+        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
       });
     } finally {
@@ -137,14 +138,17 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
         throw new ServerError(text || `HTTP ${response.status}`, response.status);
       }
 
-      return (await response.json()) as T;
+      if (response.status === 204 || response.status === 205) return undefined as T;
+      try { return (await response.json()) as T; }
+      catch { throw new ValidationError('Platform returned an invalid JSON response. The request will not be repeated.'); }
     } catch (err) {
       lastError = err as Error;
 
-      if (err instanceof AuthError || err instanceof ValidationError) {
+      if (err instanceof AuthError || err instanceof ValidationError || (err instanceof ServerError && err.statusCode < 500)) {
         throw err;
       }
 
+      if (options.method !== 'GET') throw err;
       if (attempt < MAX_RETRIES) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;

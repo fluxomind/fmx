@@ -1,9 +1,10 @@
+import { vi, type MockedFunction } from 'vitest';
 /**
  * Tests for `fmx init` — DX-first templates (GAP-178)
  */
 
-jest.mock('../lib/api-client', () => ({
-  post: jest.fn(),
+vi.mock('../lib/api-client', () => ({
+  post: vi.fn(),
   AuthError: class AuthError extends Error {},
   ServerError: class ServerError extends Error {
     constructor(message: string, public statusCode: number) {
@@ -14,17 +15,17 @@ jest.mock('../lib/api-client', () => ({
   NetworkError: class NetworkError extends Error {},
 }));
 
-jest.mock('../lib/output', () => ({
-  success: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
+vi.mock('../lib/output', () => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
   dim: (s: string) => s,
   bold: (s: string) => s,
 }));
 
-jest.mock('readline/promises', () => ({
-  createInterface: jest.fn(),
+vi.mock('readline/promises', () => ({
+  createInterface: vi.fn(),
 }));
 
 import {
@@ -36,7 +37,7 @@ import {
 } from './init';
 import * as readline from 'readline/promises';
 
-const mockCreateInterface = readline.createInterface as jest.MockedFunction<
+const mockCreateInterface = readline.createInterface as MockedFunction<
   typeof readline.createInterface
 >;
 
@@ -116,7 +117,7 @@ describe('renderReadme()', () => {
 
 describe('confirmPublicVisibility()', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('rejects public visibility in non-interactive (CI) environments', async () => {
@@ -126,8 +127,8 @@ describe('confirmPublicVisibility()', () => {
   });
 
   it('returns true when user answers "y"', async () => {
-    const questionMock = jest.fn().mockResolvedValue('y');
-    const closeMock = jest.fn();
+    const questionMock = vi.fn().mockResolvedValue('y');
+    const closeMock = vi.fn();
     mockCreateInterface.mockReturnValue({ question: questionMock, close: closeMock } as unknown as ReturnType<typeof readline.createInterface>);
 
     const confirmed = await confirmPublicVisibility(true);
@@ -136,8 +137,8 @@ describe('confirmPublicVisibility()', () => {
   });
 
   it('returns false when user answers "n" or empty', async () => {
-    const questionMock = jest.fn().mockResolvedValue('n');
-    const closeMock = jest.fn();
+    const questionMock = vi.fn().mockResolvedValue('n');
+    const closeMock = vi.fn();
     mockCreateInterface.mockReturnValue({ question: questionMock, close: closeMock } as unknown as ReturnType<typeof readline.createInterface>);
 
     const confirmed = await confirmPublicVisibility(true);
@@ -145,8 +146,8 @@ describe('confirmPublicVisibility()', () => {
   });
 
   it('case-insensitive on "Y"', async () => {
-    const questionMock = jest.fn().mockResolvedValue('Y');
-    const closeMock = jest.fn();
+    const questionMock = vi.fn().mockResolvedValue('Y');
+    const closeMock = vi.fn();
     mockCreateInterface.mockReturnValue({ question: questionMock, close: closeMock } as unknown as ReturnType<typeof readline.createInterface>);
 
     const confirmed = await confirmPublicVisibility(true);
@@ -154,8 +155,8 @@ describe('confirmPublicVisibility()', () => {
   });
 
   it('returns false when user presses enter (empty string)', async () => {
-    const questionMock = jest.fn().mockResolvedValue('');
-    const closeMock = jest.fn();
+    const questionMock = vi.fn().mockResolvedValue('');
+    const closeMock = vi.fn();
     mockCreateInterface.mockReturnValue({ question: questionMock, close: closeMock } as unknown as ReturnType<typeof readline.createInterface>);
 
     const confirmed = await confirmPublicVisibility(true);

@@ -42,8 +42,8 @@ export function generateContinueOllamaConfig(
     mcpServers: [
       {
         name: 'fluxomind',
-        command: 'fmx',
-        args: ['mcp', 'serve'],
+        type: 'streamable-http',
+        url: 'https://platform.fluxomind.com/api/mcp',
       },
     ],
     contextProviders: [{ name: 'file' }, { name: 'code' }, { name: 'terminal' }],
@@ -65,8 +65,8 @@ export function generateContinueAnthropicConfig(
     mcpServers: [
       {
         name: 'fluxomind',
-        command: 'fmx',
-        args: ['mcp', 'serve'],
+        type: 'streamable-http',
+        url: 'https://platform.fluxomind.com/api/mcp',
       },
     ],
   };

@@ -39,7 +39,7 @@ O runbook leva do zero ao primeiro `fmx deploy` em menos de 30 minutos e cobre:
 | `fmx dev` | Watch mode — cada save deploya automaticamente |
 | `fmx deploy` | Deploy manual |
 | `fmx logs --tail` | Streaming de logs |
-| `fmx mcp serve` | Inicia MCP Server local (stdio) para AI clients |
+| `fmx metadata list` / `fmx query <object>` | Consulta o tenant pela CLI |
 
 Lista completa: `fmx --help`.
 
@@ -112,7 +112,7 @@ Detalhes e validacao em `docs/first-dev-setup.md` (shippado com este pacote).
 
 ## Requisitos
 
-- Node.js >= 18 (verifique com `node -v`)
+- Node.js >= 22.12 (verifique com `node -v`)
 - 1 IDE ou AI client compativel (lista acima)
 - Conta ativa em um tenant Fluxomind
 
@@ -126,3 +126,21 @@ Detalhes e validacao em `docs/first-dev-setup.md` (shippado com este pacote).
 ## Licenca
 
 MIT — (c) Fluxomind
+
+## Interface para agentes · 0.4
+
+FMX é a CLI; o servidor MCP pertence à plataforma. Esta versão remove `fmx mcp serve`. Os presets apontam para `https://platform.fluxomind.com/api/mcp`; autentique o MCP no seu cliente, separadamente do FMX.
+
+```sh
+fmx                              # contexto atual, sem tokens
+fmx auth login --device --tenant <tenant-uuid>
+fmx metadata list --limit 100
+fmx query fm__object --limit 2 --fields id,name,api_name
+fmx --format json auth status
+```
+
+Saída padrão TOON, `--format json` para automação. Progresso vai para stderr; resultados e erros para stdout. Node >=22.12 é obrigatório. Veja a [análise da stack e limites da adoção AXI](docs/modernizacao-axi.md).
+
+Integrações opcionais: use `fmx agents setup --scope project` para contexto de sessão em Claude Code, Codex e OpenCode, ou instale a skill sob demanda com `npx skills add fluxomind/fmx --skill fmx` depois que esta branch estiver publicada. Só uma das opções já permite descobrir a CLI. `fmx agents status` inspeciona e `fmx agents remove` remove as entradas gerenciadas. O SDK de hooks também habilita o recurso hooks no config de usuário do Codex.
+
+Para desenvolver: `npm ci`, `npm run build`, `npm test`, `npm run typecheck`. Testes usam Vitest; o servidor local e sua cadeia de build foram removidos.

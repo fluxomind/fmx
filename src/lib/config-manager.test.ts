@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 /**
  * Tests for resolveApiUrl — precedence flag > env > ~/.fmx/config.json > default.
  */
@@ -6,12 +7,12 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-const FAKE_HOME = join(tmpdir(), `fmx-test-home-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+const { FAKE_HOME } = vi.hoisted(() => ({ FAKE_HOME: `/tmp/fmx-test-home-${Date.now()}-${Math.random().toString(36).slice(2)}` }));
 const FAKE_FMX_DIR = join(FAKE_HOME, '.fmx');
 const FAKE_CONFIG_PATH = join(FAKE_FMX_DIR, 'config.json');
 
-jest.mock('os', () => {
-  const actual = jest.requireActual('os');
+vi.mock('os', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('os')>();
   return {
     ...actual,
     homedir: () => FAKE_HOME,
@@ -30,7 +31,7 @@ beforeEach(() => {
   if (existsSync(FAKE_FMX_DIR)) rmSync(FAKE_FMX_DIR, { recursive: true });
   mkdirSync(FAKE_FMX_DIR, { recursive: true });
   delete process.env.FLUXOMIND_API_URL;
-  jest.resetModules();
+  vi.resetModules();
 });
 
 const writeConfigFile = (apiBaseUrl: string): void => {
@@ -66,7 +67,7 @@ describe('resolveApiUrl — endpoint precedence', () => {
 
   it('(e) JSON corrupto — fallback para default + warning em stderr', async () => {
     writeFileSync(FAKE_CONFIG_PATH, '{ this is not valid json', { mode: 0o600 });
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const { resolveApiUrl, DEFAULT_API_BASE_URL } = await import('./config-manager');
     expect(resolveApiUrl()).toBe(DEFAULT_API_BASE_URL);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('not valid JSON'));
@@ -77,7 +78,7 @@ describe('resolveApiUrl — endpoint precedence', () => {
 describe('resolveApiUrl — HTTPS warning', () => {
   it('warns when URL is non-HTTPS and not localhost', async () => {
     process.env.FLUXOMIND_API_URL = 'http://staging.example.com';
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const { resolveApiUrl } = await import('./config-manager');
     resolveApiUrl();
     expect(stderrSpy).toHaveBeenCalledWith(
@@ -88,7 +89,7 @@ describe('resolveApiUrl — HTTPS warning', () => {
 
   it('does not warn for HTTPS URLs', async () => {
     process.env.FLUXOMIND_API_URL = 'https://example.com';
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const { resolveApiUrl } = await import('./config-manager');
     resolveApiUrl();
     expect(stderrSpy).not.toHaveBeenCalled();
@@ -97,7 +98,7 @@ describe('resolveApiUrl — HTTPS warning', () => {
 
   it('does not warn for localhost', async () => {
     process.env.FLUXOMIND_API_URL = 'http://localhost:3000';
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const { resolveApiUrl } = await import('./config-manager');
     resolveApiUrl();
     expect(stderrSpy).not.toHaveBeenCalled();
@@ -106,7 +107,7 @@ describe('resolveApiUrl — HTTPS warning', () => {
 
   it('does not warn for 127.0.0.1', async () => {
     process.env.FLUXOMIND_API_URL = 'http://127.0.0.1:3000';
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const { resolveApiUrl } = await import('./config-manager');
     resolveApiUrl();
     expect(stderrSpy).not.toHaveBeenCalled();

@@ -2,9 +2,9 @@
 # Valida os 7 templates de config dos AI clients:
 #   1. JSON sintaticamente valido (jq empty)
 #   2. Sem secrets hardcoded (eyJ, sk-*, github_pat, AKIA)
-#   3. mcpServers/servers apontam para `fmx mcp serve` (sem drift de nomenclatura)
+#   3. mcpServers/servers apontam para o MCP remoto
 #
-# Uso: bash packages/cli/setup/configs.test.sh
+# Uso: bash setup/configs.test.sh
 
 set -euo pipefail
 
@@ -41,17 +41,12 @@ if grep -rEn '(eyJ[A-Za-z0-9_=-]{20,}|sk-[a-zA-Z0-9]{20,}|github_pat_[a-zA-Z0-9_
 fi
 pass "zero secrets hardcoded"
 
-# --- Command nomenclature check ---
-echo ">> Command nomenclature (fmx mcp serve)"
-EXPECTED='"mcp", "serve"'
+# --- Remote MCP configuration ---
+echo ">> Remote MCP configuration"
 while IFS= read -r f; do
-  if grep -q '"command": "fmx"' "$f"; then
-    if grep -q "$EXPECTED" "$f"; then
-      pass "fmx mcp serve: ${f#"$CONFIGS"/}"
-    else
-      fail "nomenclatura drift em $f — esperado args contem \"mcp\", \"serve\""
-    fi
+  if grep -q '"url":' "$f"; then
+    jq -e '.. | objects | select(has("url")) | .url == "https://platform.fluxomind.com/api/mcp"' "$f" >/dev/null || fail "endpoint invalido: $f"
+    pass "remote MCP: ${f#"$CONFIGS"/}"
   fi
 done <<< "$FILES"
-
 echo "OK — configs.test.sh concluido"
