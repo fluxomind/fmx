@@ -23,6 +23,10 @@ import { linkRepoCommand } from './commands/link-repo';
 import { configureOutput, error } from './lib/output';
 import { VERSION } from './version';
 import { home } from './lib/home';
+import { workflowCommand } from './commands/workflow';
+import { agentCommand } from './commands/agent';
+import { apiCommand } from './commands/api';
+import { recordsCommand } from './commands/records';
 import { agentsCommand } from './commands/agents';
 import { metadataCommand, queryCommand } from './commands/inspect';
 import { loadConfig } from './lib/config-manager';
@@ -51,17 +55,23 @@ program.addCommand(publishCommand);
 program.addCommand(cloneCommand);
 program.addCommand(linkRepoCommand);
 
+program.addCommand(apiCommand);
+program.addCommand(workflowCommand);
+program.addCommand(agentCommand);
+program.addCommand(recordsCommand);
 program.addCommand(agentsCommand);
 program.addCommand(metadataCommand);
 program.addCommand(queryCommand);
 let usageHelp: string | undefined;
+let activeHelp: string | undefined;
 function configure(command: Command): void {
   command.exitOverride();
   command.configureOutput({ writeErr: () => undefined, outputError: () => { usageHelp = command.helpInformation(); } });
   for (const child of command.commands) configure(child);
 }
 configure(program);
-program.hook('preAction', () => {
+program.hook('preAction', (_root, action) => {
+  activeHelp = action.helpInformation();
   const requested = program.opts().format;
   const stored = loadConfig().outputFormat;
   const value = program.getOptionValueSource('format') === 'cli' ? requested : (stored === 'text' ? 'toon' : stored);
@@ -74,7 +84,8 @@ configureOutput(formatIndex >= 0 && process.argv[formatIndex + 1] === 'json' || 
 program.parseAsync(process.argv).catch((err: Error) => {
   if (err instanceof CommanderError && err.exitCode === 0) return;
   const usage = err instanceof CommanderError || err.name === 'InvalidArgumentError';
-  error(err.message, usage ? usageHelp ?? 'Use the command with --help to see valid arguments and flags.' :
-    err.name === 'AuthError' ? 'fmx auth login --device --tenant <tenant-uuid>' : undefined);
+  error(err.message, usage ? usageHelp ?? activeHelp ?? 'Use the command with --help to see valid arguments and flags.' :
+    err.name === 'AuthError' ? 'fmx auth login --device --tenant <tenant-uuid>' : undefined,
+    !usage && 'statusCode' in err ? { status: (err as { statusCode: number }).statusCode, ...('code' in err && err.code ? { code: err.code } : {}), ...('details' in err && err.details ? { details: err.details } : {}) } : undefined);
   process.exitCode = usage ? 2 : 1;
 });

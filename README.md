@@ -144,3 +144,22 @@ Saída padrão TOON, `--format json` para automação. Progresso vai para stderr
 Integrações opcionais: use `fmx agents setup --scope project` para contexto de sessão em Claude Code, Codex e OpenCode, ou instale a skill sob demanda com `npx skills add fluxomind/fmx --skill fmx` depois que esta branch estiver publicada. Só uma das opções já permite descobrir a CLI. `fmx agents status` inspeciona e `fmx agents remove` remove as entradas gerenciadas. O SDK de hooks também habilita o recurso hooks no config de usuário do Codex.
 
 Para desenvolver: `npm ci`, `npm run build`, `npm test`, `npm run typecheck`. Testes usam Vitest; o servidor local e sua cadeia de build foram removidos.
+
+## Capacidades da plataforma · 0.4.0-alpha.2
+
+Além das extensions, o FMX agora administra registros, agentes e workflows com as APIs reais da plataforma:
+
+```sh
+fmx records list fm__agent --fields id,name,is_active
+fmx metadata view fm__agent
+fmx agent export <id> --out agent.json
+fmx workflow actions list
+fmx workflow create --file workflow.json
+fmx workflow publish <id>
+fmx workflow run <id> --trigger '{"source":"cli"}'
+fmx api GET /api/v1/openapi.json --format json
+```
+
+CRUD, batches, agregações, atualização condicional, configuração portátil de agentes, versões e execução de workflows estão documentados em [capacidades e contratos](docs/capacidades-plataforma.md). Use `agent` para agentes da plataforma; `agents` continua dedicado aos hooks AXI. Arquivos e stdin são aceitos com `--file <path|->`.
+
+Para CI, `FLUXOMIND_ACCESS_TOKEN` pode fornecer um token Bearer de sessão aceito pela API, sem armazená-lo ou imprimi-lo. Ele prevalece sobre a sessão salva e não faz refresh. A CLI não presume que tokens MCP e FMX sejam intercambiáveis.

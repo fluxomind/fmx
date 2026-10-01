@@ -8,7 +8,11 @@ export const guidance = [
   'fmx auth login --device --tenant <tenant-uuid>',
   'fmx metadata list --limit 100',
   'fmx metadata view <object>',
-  'fmx query <object> --limit 20 --fields <field,field>',
+  'fmx records list <object> --limit 20 --fields <field,field>',
+  'fmx agent list',
+  'fmx workflow actions list',
+  'fmx workflow list',
+  'fmx api GET /api/v1/openapi.json --format json',
   'fmx agents setup',
 ];
 export function home(): void {
@@ -16,5 +20,5 @@ export function home(): void {
   const tenants = getStoredTenants().map(tenant => ({ tenant, authenticated: getAuthStatus(tenant).authenticated }));
   print({ bin: resolve(process.argv[1]).replace(homedir(), '~'), description: 'Develop Fluxomind extensions and inspect the active tenant', version: VERSION,
     cwd: process.cwd(), api: resolveApiUrl(), tenant: config.defaultTenant ?? tenants[0]?.tenant ?? null,
-    authentication: tenants, help: tenants.some(t => t.authenticated) ? guidance.slice(1) : [guidance[0]] });
+    authentication: tenants, help: tenants.some(t => t.authenticated) ? guidance.slice(1, 5) : [guidance[0]] });
 }

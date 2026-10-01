@@ -1,5 +1,7 @@
 # Modernização do FMX · 0.4.0-alpha.1
 
+> Registro da base inicial. As APIs de metadata e capacidades novas da versão 0.4.0-alpha.2 estão em [capacidades da plataforma](capacidades-plataforma.md).
+
 O FMX é uma CLI de desenvolvimento e operação por terminal. O MCP remoto da plataforma é outra interface para os agentes. Ambos usam serviços da plataforma, mas a sessão OAuth do MCP pertence ao cliente MCP; a sessão da CLI pertence ao FMX.
 
 ## Stack encontrada e decisão

@@ -36,21 +36,22 @@ export function projectRows(rows: Record<string, unknown>[], fields: string[] | 
   return { rows: result, truncated };
 }
 export const metadataCommand = new Command('metadata').description('Read tenant object and field metadata');
-options(metadataCommand.command('list').description('List objects (default fields: apiName,label,fieldCount)'), 499)
-  .action(async (opts: ReadOptions) => {
-    const fields = fieldNames(opts, ['apiName', 'label', 'fieldCount']);
-    const response = await get<{ objects: Record<string, unknown>[] }>(`/api/code-engine/metadata?limit=${opts.limit + 1}&offset=${opts.offset}`, opts.tenant);
+options(metadataCommand.command('list').description('List objects (default fields: id,apiName,label)'), 199)
+  .option('--prefix <prefix>', 'Filter object API names by prefix')
+  .action(async (opts: ReadOptions & { prefix?: string }) => {
+    const fields = fieldNames(opts, ['id', 'apiName', 'label']);
+    const response = await get<{ objects: Record<string, unknown>[] }>(`/api/v1/metadata/objects?limit=${opts.limit + 1}&offset=${opts.offset}${opts.prefix ? `&prefix=${encodeURIComponent(opts.prefix)}` : ''}`, opts.tenant);
     const result = projectRows(response.objects.slice(0, opts.limit), fields, opts.full);
     print({ count: result.rows.length, total: null, hasMore: response.objects.length > opts.limit, offset: opts.offset, objects: result.rows,
-      ...(response.objects.length > opts.limit ? { help: `fmx metadata list --offset ${opts.offset + result.rows.length} --limit ${opts.limit}${opts.tenant ? ` --tenant ${opts.tenant}` : ''}` } : {}),
+      ...(response.objects.length > opts.limit ? { help: `fmx metadata list --offset ${opts.offset + result.rows.length} --limit ${opts.limit}${opts.tenant ? ` --tenant ${opts.tenant}` : ''}${opts.prefix ? ` --prefix ${opts.prefix}` : ''}` } : {}),
       ...(result.truncated ? { truncated: true, full: `fmx metadata list --full${opts.tenant ? ` --tenant ${opts.tenant}` : ''}` } : {}) });
   });
-options(metadataCommand.command('view <object>').description('View object fields (default fields: apiName,type,required)'))
+options(metadataCommand.command('view <object>').description('View object fields (default fields: apiName,type,isRequired)'))
   .action(async (object: string, opts: ReadOptions) => {
-    const fields = fieldNames(opts, ['apiName', 'type', 'required']);
-    const response = await get<{ fields: Record<string, unknown>[] }>(`/api/code-engine/metadata?object=${encodeURIComponent(object)}`, opts.tenant);
+    const fields = fieldNames(opts, ['apiName', 'type', 'isRequired']);
+    const response = await get<{ fields: Record<string, unknown>[] }>(`/api/v1/metadata/objects/${encodeURIComponent(object)}/fields`, opts.tenant);
     const result = projectRows(response.fields.slice(opts.offset, opts.offset + opts.limit), fields, opts.full);
-    print({ object, count: result.rows.length, total: response.fields.length < 500 ? response.fields.length : null, offset: opts.offset, fields: result.rows,
+    print({ object, count: result.rows.length, total: response.fields.length < 200 ? response.fields.length : null, offset: opts.offset, fields: result.rows, sourceLimit: 200, hasMore: opts.offset + result.rows.length < response.fields.length ? true : response.fields.length === 200 ? null : false,
       ...(result.truncated ? { help: `fmx metadata view ${object} --full${opts.tenant ? ` --tenant ${opts.tenant}` : ''}` } : {}) });
   });
 export const queryCommand = options(new Command('query').description('Read records (default fields when present: id,name,api_name,status)').argument('<object>'))

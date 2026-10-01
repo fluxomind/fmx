@@ -1,7 +1,7 @@
 {
   "name": "@fluxomind/cli",
-  "version": "0.4.0-alpha.1",
-  "description": "Fluxomind Platform CLI \u2014 create, develop, deploy and manage extensions",
+  "version": "0.4.0-alpha.2",
+  "description": "Fluxomind Platform CLI — create, develop, deploy and manage extensions",
   "bin": {
     "fmx": "./dist/bin.js"
   },

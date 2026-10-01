@@ -20,8 +20,8 @@ export function success(msg: string): void {
   if (format === 'text') console.log(`OK ${msg}`);
   else print({ ok: true, message: msg });
 }
-export function error(msg: string, help?: string): void {
-  print({ error: msg, ...(help ? { help } : {}) });
+export function error(msg: string, help?: string, context?: Record<string, unknown>): void {
+  print({ error: msg, ...(help ? { help } : {}), ...context });
 }
 export function warn(msg: string): void { process.stderr.write(`WARN ${msg}\n`); }
 export function info(msg: string): void { process.stderr.write(`INFO ${msg}\n`); }

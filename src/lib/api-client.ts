@@ -36,6 +36,8 @@ export class ServerError extends Error {
   constructor(
     message: string,
     public statusCode: number,
+    public code?: string,
+    public details?: unknown,
   ) {
     super(message);
     this.name = 'ServerError';
@@ -43,7 +45,7 @@ export class ServerError extends Error {
 }
 
 interface RequestOptions {
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   path: string;
   body?: unknown;
   headers?: Record<string, string>;
@@ -65,7 +67,8 @@ function resolveTargetTenant(explicit?: string): string | undefined {
 }
 
 export async function apiRequest<T = unknown>(options: RequestOptions): Promise<T> {
-  const targetTenant = resolveTargetTenant(options.tenant);
+  const envToken = process.env.FLUXOMIND_ACCESS_TOKEN;
+  const targetTenant = envToken ? undefined : resolveTargetTenant(options.tenant);
 
   if (targetTenant) {
     await refreshIfExpired(targetTenant);
@@ -81,7 +84,7 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
       'Idempotency-Key': idempotencyKey,
       ...options.headers,
     };
-    const token = targetTenant ? getTenantAuth(targetTenant)?.accessToken ?? null : getAuthToken();
+    const token = envToken ?? (targetTenant ? getTenantAuth(targetTenant)?.accessToken ?? null : getAuthToken());
     if (token) headers['Authorization'] = `Bearer ${token}`;
     return headers;
   };
@@ -114,6 +117,7 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
           refreshAttempted = true;
           const outcome = await forceRefresh(targetTenant);
           if (outcome.refreshed) {
+            attempt--; // Renewing rejected credentials does not consume the transient retry budget.
             continue;
           }
         }
@@ -129,13 +133,13 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
         throw new ValidationError('Validation failed', data);
       }
 
-      if (response.status >= 500) {
-        throw new ServerError(`Server error (${response.status})`, response.status);
-      }
-
       if (!response.ok) {
-        const text = await response.text().catch(() => '');
-        throw new ServerError(text || `HTTP ${response.status}`, response.status);
+        const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+        const envelope = payload?.error;
+        const objectError = envelope && typeof envelope === 'object' ? envelope as Record<string, unknown> : undefined;
+        const message = typeof payload?.message === 'string' ? payload.message : typeof objectError?.message === 'string' ? objectError.message : typeof envelope === 'string' ? envelope : `HTTP ${response.status}`;
+        const code = typeof objectError?.code === 'string' ? objectError.code : typeof payload?.errorCode === 'string' ? payload.errorCode : undefined;
+        throw new ServerError(message.slice(0, 2000), response.status, code, payload?.conflict ?? objectError?.details ?? payload?.details);
       }
 
       if (response.status === 204 || response.status === 205) return undefined as T;
