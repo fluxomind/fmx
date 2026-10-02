@@ -7,6 +7,9 @@ npm install -g @fluxomind/cli
 fmx --version
 ```
 
+Versão principal: **`0.4.0`**, publicada na tag npm `latest`. O comando de instalação acima
+usa essa tag; para fixar a versão, use `npm install -g @fluxomind/cli@0.4.0`.
+
 ## Primeiro deploy em <30 minutos
 
 1. Instale o CLI (acima).

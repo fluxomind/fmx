@@ -1,4 +1,4 @@
-# CLI reference — 0.4.0-alpha.5
+# CLI reference — 0.4.0
 
 Generated from the offline command catalog. Read only the group/section needed for the task. Examples use `fmx` as shorthand for the executable selected in SKILL.md. Placeholders must come from user intent or observed results. A listed command does not establish permission to run it.
 

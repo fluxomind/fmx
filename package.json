@@ -1,6 +1,6 @@
 {
   "name": "@fluxomind/cli",
-  "version": "0.4.0-alpha.5",
+  "version": "0.4.0",
   "description": "Fluxomind Platform CLI — build and operate apps, agents, workflows and extensions",
   "bin": {
     "fmx": "dist/bin.js"

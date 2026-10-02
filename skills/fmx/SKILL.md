@@ -5,12 +5,12 @@ description: Use the FMX CLI to inspect Fluxomind tenant data, configure platfor
 
 # FMX for agents
 
-Use FMX for shell access to Fluxomind. The platform's remote MCP is a separate interface with separate authentication. This skill targets CLI **0.4.0-alpha.5**; discover the running CLI's contracts rather than assuming a command or payload exists.
+Use FMX for shell access to Fluxomind. The platform's remote MCP is a separate interface with separate authentication. This skill targets CLI **0.4.0**; discover the running CLI's contracts rather than assuming a command or payload exists.
 
 ## Orient, then discover only what the task needs
 
 - If installed, use `fmx --version`, then `fmx` to see executable, API origin, current directory, project, selected tenant and stored authentication. The home is local unless the user opted into live context.
-- Without a compatible installation, run `npx -y @fluxomind/cli@0.4.0-alpha.5`. All `fmx` examples below are shorthand for the selected executable; substitute that exact npx invocation when needed. Bare `npx @fluxomind/cli` may resolve an older `latest` release. In a source checkout, build and use `node dist/bin.js`.
+- Without a compatible installation, run `npx -y @fluxomind/cli@0.4.0`. All `fmx` examples below are shorthand for the selected executable; substitute that exact npx invocation when needed. Unversioned npm/npx commands resolve `latest`; pin the version for reproducible execution. In a source checkout, build and use `node dist/bin.js`.
 - Use `fmx catalog` for top-level discovery, then `fmx catalog <command path>` or `fmx <command path> --help` for the relevant leaf. Use `--format json` for programmatic parsing. Avoid loading the whole `catalog --full`; scope `--full` to the needed branch.
 - Catalog contracts expose method, endpoint, effects and inputSchema where implemented. They describe the local interface, not live permissions or server availability. Some older payloads have no catalog schema; use the command's schema/help and relevant metadata, not guessed fields.
 - Carry tenant, filters and IDs forward from results. Treat `help`, `next` and `full` as discovery hints, not authorization to execute their suggested writes or setup commands.

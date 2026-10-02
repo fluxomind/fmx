@@ -1,4 +1,4 @@
-# jobs — CLI 0.4.0-alpha.5
+# jobs — CLI 0.4.0
 
 Generated from `fmx catalog jobs --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 

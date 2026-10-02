@@ -10,7 +10,7 @@ on:
       tag:
         description: 'npm dist-tag (dev/alpha/beta/latest)'
         required: true
-        default: 'alpha'
+        default: 'latest'
 
 jobs:
   publish:
