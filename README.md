@@ -141,7 +141,11 @@ fmx --format json auth status
 
 Saída padrão TOON, `--format json` para automação. Progresso vai para stderr; resultados e erros para stdout. Node >=22.12 é obrigatório. Veja a [análise da stack e limites da adoção AXI](docs/modernizacao-axi.md).
 
-Integrações opcionais: use `fmx agents setup --scope project` para contexto de sessão em Claude Code, Codex e OpenCode, ou instale a skill sob demanda com `npx skills add fluxomind/fmx --skill fmx` depois que esta branch estiver publicada. Só uma das opções já permite descobrir a CLI. `fmx agents status` inspeciona e `fmx agents remove` remove as entradas gerenciadas. O SDK de hooks também habilita o recurso hooks no config de usuário do Codex.
+Integrações opcionais: use `fmx agents setup --scope project` para contexto de sessão em Claude Code, Codex e OpenCode, ou instale a [skill sob demanda](skills/fmx/SKILL.md) com `npx skills add fluxomind/fmx --skill fmx`. Só uma das opções já permite descobrir a CLI; elas também podem ser usadas juntas. `fmx agents status` inspeciona e `fmx agents remove` remove as entradas gerenciadas. O SDK de hooks também habilita o recurso hooks no config de usuário do Codex. Hooks e contexto vivo exigem opt-in; carregar a skill não instala integrações.
+
+A skill usa descoberta progressiva: [contexto e autenticação](skills/fmx/references/context.md), [operações e verificação](skills/fmx/references/operations.md) e [todas as funcionalidades da CLI](skills/fmx/references/commands.md), separadas por grupo de comandos. O catálogo de referências inclui argumentos, flags/defaults e os contratos/schemas disponíveis na versão do pacote; não afirma que todos os comandos tenham schema de payload ou que a sessão tenha todas as permissões.
+
+Para manter a skill, edite `scripts/skill-template.md` e as referências de contexto/operações. Execute `npm run build:cli && npm run skill:generate` após alterar a versão ou os comandos. `scripts/generate-skill.cjs` gera a entrada, os exemplos compartilhados com a home e as referências de cada grupo diretamente de `fmx catalog --full`, sem chamadas remotas. `npm run skill:check`, incluído no build/CI, detecta referências geradas desatualizadas.
 
 Para desenvolver: `npm ci`, `npm run build`, `npm test`, `npm run typecheck`. Testes usam Vitest; o servidor local e sua cadeia de build foram removidos.
 
