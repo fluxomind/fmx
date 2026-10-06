@@ -1,4 +1,4 @@
-# auth — CLI 0.4.0
+# auth — CLI 0.5.0
 
 Generated from `fmx catalog auth --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 
@@ -50,4 +50,14 @@ Show current authentication status
 ```sh
 fmx auth status
 ```
+
+## auth check
+
+Verify remote identity and tenant; saved status alone is not proof
+
+```sh
+fmx auth check [options]
+```
+
+- `--tenant <uuid>`: Tenant (default: configured tenant)
 

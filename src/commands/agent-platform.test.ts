@@ -20,7 +20,7 @@ beforeAll(async () => {
     const chunks: Buffer[] = []; for await (const c of req) chunks.push(Buffer.from(c));
     const text = Buffer.concat(chunks).toString(); const body = text ? JSON.parse(text) : undefined;
     calls.push({ method: req.method!, path: req.url!, body, headers: req.headers });
-    const r = respond(req.method!, new URL(req.url!, origin), body);
+    const r = req.url === '/api/v1/session-check' ? { data: { tokenUser: { tenantId: tenant, userId: 'user' } } } : respond(req.method!, new URL(req.url!, origin), body);
     res.writeHead(r.status ?? 200, { 'content-type': 'application/json' }); res.end(JSON.stringify(r.data));
   });
   await new Promise<void>(r => server.listen(0, '127.0.0.1', r)); origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
@@ -157,7 +157,7 @@ describe('Declarative record plans', () => {
   it('rechecks all baselines before any write, then forwards expectedValues', async () => {
     await plan([{ key: 'first', object: 'demo__request', id: 'one', data: { name: 'Changed' } }, { key: 'second', object: 'demo__request', id: 'two', data: { enabled: true } }]); calls = [];
     const r = await run(['resources', 'apply', '--file', planFile]); expect(r.code).toBe(0); expect(r.data.success).toBe(true);
-    expect(calls.map(c => c.method)).toEqual(['GET', 'GET', 'PUT', 'PUT']); expect(calls[2].body).toEqual({ id: 'one', payload: { name: 'Changed' }, expectedValues: { name: 'Before' } });
+    expect(calls.map(c => c.method)).toEqual(['GET', 'GET', 'GET', 'PUT', 'PUT']); expect(calls[3].body).toEqual({ id: 'one', payload: { name: 'Changed' }, expectedValues: { name: 'Before' } });
   });
   it('refuses a stale plan before performing any write', async () => {
     await plan([{ key: 'first', object: 'demo__request', id: 'one', data: { name: 'Changed' } }]); remote.one.name = 'Concurrent edit'; calls = [];

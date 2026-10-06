@@ -1,4 +1,4 @@
-# knowledge — CLI 0.4.0
+# knowledge — CLI 0.5.0
 
 Generated from `fmx catalog knowledge --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 

@@ -1,10 +1,10 @@
-# dev — CLI 0.4.0
+# dev — CLI 0.5.0
 
 Generated from `fmx catalog dev --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 
 ## dev
 
-Start development mode (watch + auto-deploy)
+Start development mode (watch + upload; acceptance is not deployment proof)
 
 ```sh
 fmx dev [options]

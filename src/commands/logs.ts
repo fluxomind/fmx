@@ -1,3 +1,4 @@
+import { tenantOption } from '../lib/command-options';
 import { Command } from 'commander';
 import { get } from '../lib/api-client';
 import { SSEClient } from '../lib/sse-client';
@@ -12,7 +13,7 @@ function formatLog(data: string, json: boolean): void {
   print(log);
 }
 
-export const logsCommand = new Command('logs')
+export const logsCommand = tenantOption(new Command('logs'))
   .description('View extension logs')
   .argument('[extensionId]', 'Extension ID')
   .option('--tail', 'Stream logs in real-time')
@@ -23,7 +24,7 @@ export const logsCommand = new Command('logs')
   .option('--extension <id>', 'Filter by extension ID (alternative to positional arg) — EVO-394')
   .option('--grep <pattern>', 'Regex match in log message field — EVO-394')
   .option('--trace <cid>', 'Filter by correlation ID (OTel) — EVO-394')
-  .action(async (extensionId: string | undefined, opts: { tail?: boolean; level?: string; since?: string; limit: string; json?: boolean; extension?: string; grep?: string; trace?: string }) => {
+  .action(async (extensionId: string | undefined, opts: { tenant?: string; tail?: boolean; level?: string; since?: string; limit: string; json?: boolean; extension?: string; grep?: string; trace?: string }) => {
     const params = new URLSearchParams();
     let effectiveExtension: string;
     try {
@@ -43,6 +44,7 @@ export const logsCommand = new Command('logs')
     if (opts.tail) {
       info('Streaming logs... (Ctrl+C to stop)');
       const sse = new SSEClient({
+        tenant: opts.tenant,
         path: `/api/code-engine/logs/stream?${params.toString()}`,
         onMessage: (event, data) => {
           if (event === 'log') formatLog(data, !!opts.json);
@@ -61,7 +63,7 @@ export const logsCommand = new Command('logs')
       await sse.connect();
     } else {
       try {
-        const logs = await get<Array<Record<string, unknown>>>(`/api/code-engine/logs?${params.toString()}`);
+        const logs = await get<Array<Record<string, unknown>>>(`/api/code-engine/logs?${params.toString()}`, opts.tenant);
         if (opts.json) configureOutput('json');
         print({ count: logs.length, logs });
       } catch (err) {

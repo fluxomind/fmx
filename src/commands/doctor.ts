@@ -1,3 +1,4 @@
+import { remoteIdentity } from '../lib/remote-identity';
 import { Command } from 'commander';
 import { get, apiRequest } from '../lib/api-client';
 import { recordPath } from '../lib/record-service';
@@ -15,6 +16,8 @@ export const doctorCommand = tenantOption(new Command('doctor').description('Off
     checks.push({ name: 'runtime', ok: true, result: process.version });
     if (opts.object && !opts.remote) { print({ error: '--object requires --remote', code: 'INVALID_USAGE', help: 'fmx doctor --remote --object <object>' }); process.exitCode = 2; return; }
     if (opts.remote) {
+      try { checks.push({ name: 'authenticated-identity', ok: true, result: await remoteIdentity(opts.tenant) }); }
+      catch (err) { checks.push({ name: 'authenticated-identity', ok: false, error: (err as Error).message }); }
       try { const health = await apiRequest<{ status: string }>({ method: 'GET', path: '/api/health', retries: 0, timeout: 5000 }); checks.push({ name: 'platform-health', ok: health.status === 'ok', result: health }); }
       catch (err) { checks.push({ name: 'platform-health', ok: false, error: (err as Error).message }); }
       if (opts.object) {

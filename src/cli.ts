@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { filesCommand, tenantCommand } from './commands/capabilities';
 
 /**
  * fmx CLI — Fluxomind Platform Developer Tool
@@ -74,6 +75,8 @@ program.addCommand(linkRepoCommand);
 for (const command of [modelCommand, appsCommand, connectionsCommand, jobsCommand]) program.addCommand(command);
 registerPlatformExtensions();
 program.addCommand(knowledgeCommand);
+program.addCommand(filesCommand);
+program.addCommand(tenantCommand);
 program.addCommand(accessCommand);
 program.addCommand(resourcesCommand);
 program.addCommand(dashboardCommand);
@@ -107,7 +110,7 @@ program.hook('preAction', (_root, action) => {
   setReadOnly(Boolean(action.optsWithGlobals().readOnly));
   if (isDryRun() || isReadOnly()) {
     let top = action; while (top.parent && top.parent !== program) top = top.parent;
-    if (!['fmx', 'api', 'records', 'workflow', 'agent', 'model', 'apps', 'connections', 'jobs', 'doctor', 'catalog', 'knowledge', 'access', 'metadata', 'resources', 'dashboard', 'policy'].includes(top.name())) action.error('--dry-run/--read-only are supported for API-backed platform commands, not authentication or local setup', { exitCode: 2 });
+    if (!['fmx', 'api', 'records', 'workflow', 'agent', 'model', 'apps', 'connections', 'jobs', 'doctor', 'catalog', 'knowledge', 'access', 'metadata', 'resources', 'dashboard', 'policy', 'files', 'tenant'].includes(top.name())) action.error('--dry-run/--read-only are supported for API-backed platform commands, not authentication or local setup', { exitCode: 2 });
   }
 });
 // Usage failures can occur before preAction (unknown flags). Preserve the explicitly requested output format.

@@ -3,8 +3,8 @@
  * @package @fluxomind/cli
  */
 
-import { readdirSync, readFileSync, statSync } from 'fs';
-import { join, relative } from 'path';
+import { readdirSync, readFileSync, statSync, existsSync, lstatSync } from 'fs';
+import { join, relative, resolve, isAbsolute } from 'path';
 import { createHash } from 'crypto';
 
 export interface BundleFile {
@@ -17,6 +17,7 @@ export interface Bundle {
   files: BundleFile[];
   totalHash: string;
   totalSize: number;
+  deletedFiles?: string[];
 }
 
 const IGNORE_PATTERNS = [
@@ -62,20 +63,40 @@ function collectFiles(dir: string, basePath: string = dir): BundleFile[] {
 
 export function createBundle(projectDir: string): Bundle {
   const files = collectFiles(projectDir);
-  const totalSize = files.reduce((sum, f) => sum + f.content.length, 0);
+  const totalSize = files.reduce((sum, f) => sum + Buffer.byteLength(f.content), 0);
   const totalHash = hashContent(files.map((f) => f.hash).sort().join(''));
   return { files, totalHash, totalSize };
 }
 
 export function createIncrementalBundle(
   projectDir: string,
-  previousHashes: Map<string, string>
+  previousHashes: Map<string, string>,
+  changedPaths?: string[],
 ): Bundle {
-  const allFiles = collectFiles(projectDir);
-  const changedFiles = allFiles.filter((f) => previousHashes.get(f.path) !== f.hash);
-  const totalHash = hashContent(allFiles.map((f) => f.hash).sort().join(''));
-  const totalSize = changedFiles.reduce((sum, f) => sum + f.content.length, 0);
-  return { files: changedFiles, totalHash, totalSize };
+  const base = resolve(projectDir);
+  let allFiles: BundleFile[];
+  const deletedFiles: string[] = [];
+  if (!changedPaths || previousHashes.size === 0) {
+    allFiles = collectFiles(base);
+    const present = new Set(allFiles.map(file => file.path));
+    for (const path of previousHashes.keys()) if (!present.has(path)) deletedFiles.push(path);
+  } else {
+    allFiles = [];
+    for (const changed of new Set(changedPaths)) {
+      const fullPath = resolve(changed);
+      const path = relative(base, fullPath);
+      if (isAbsolute(path) || path === '..' || path.startsWith('../') || !shouldInclude(path)) continue;
+      if (!existsSync(fullPath)) { if (previousHashes.has(path)) deletedFiles.push(path); continue; }
+      if (!lstatSync(fullPath).isFile()) continue;
+      const content = readFileSync(fullPath, 'utf8');
+      allFiles.push({ path, content, hash: hashContent(content) });
+    }
+  }
+  const files = allFiles.filter(file => previousHashes.get(file.path) !== file.hash);
+  const hashes = new Map(previousHashes);
+  for (const file of allFiles) hashes.set(file.path, file.hash);
+  for (const path of deletedFiles) hashes.delete(path);
+  return { files, deletedFiles, totalHash: hashContent([...hashes].map(([path, hash]) => path + ':' + hash).sort().join('')), totalSize: files.reduce((sum, file) => sum + Buffer.byteLength(file.content), 0) };
 }
 
 const MAX_BUNDLE_SIZE = 50 * 1024 * 1024; // 50MB

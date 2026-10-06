@@ -6,6 +6,7 @@ import { compact, detail, mutationResult } from './platform-output';
 import { print } from './output';
 export interface Contract { method: string; endpoint: string; effects: string[]; inputSchema?: unknown; serverAuthoritative: true; validation: string }
 const contracts = new WeakMap<Command, Contract>();
+export function declareContract(command: Command, contract: Contract): void { contracts.set(command, contract); }
 const inputSchemas = new WeakMap<Command, z.ZodType>();
 export function commandContract(command: Command): Contract | undefined {
   const contract = contracts.get(command); const schema = inputSchemas.get(command);

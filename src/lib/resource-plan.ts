@@ -1,3 +1,5 @@
+import { remoteIdentity } from './remote-identity';
+import { mapLimited } from './concurrency';
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
@@ -58,8 +60,8 @@ export function assertPlanTarget(target: { apiOrigin: string; tenant: string }, 
   if (token) {
     // This is a routing consistency check, not JWT verification; the server verifies every call.
     let claim: unknown;
-    try { claim = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).tenantId; } catch { fail('Declarative operations require a tenant-bound session JWT; opaque environment tokens cannot be bound locally'); }
-    if (String(claim) !== target.tenant) fail('Environment token tenant differs from the manifest/plan tenant');
+    try { claim = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).tenantId; } catch { /* Opaque sessions are checked remotely before planning or writing. */ }
+    if (claim !== undefined && String(claim) !== target.tenant) fail('Environment token tenant differs from the manifest/plan tenant');
   } else { const active = resolveTargetTenant(explicitTenant); if (active && active !== target.tenant) fail('Active project/session tenant differs from the manifest/plan; select --tenant explicitly if this target is intentional'); }
 }
 async function matched(object: string, match: Record<string, unknown>, tenant: string): Promise<JsonRecord | undefined> {
@@ -70,18 +72,22 @@ async function matched(object: string, match: Record<string, unknown>, tenant: s
 }
 export async function buildResourcePlan(manifest: ResourceManifest, explicitTenant?: string): Promise<ResourcePlan> {
   assertPlanTarget(manifest, explicitTenant);
+  if (process.env.FLUXOMIND_ACCESS_TOKEN) await remoteIdentity(manifest.tenant);
   const operations: ResourcePlan['operations'] = []; const schemas = new Map<string, string[]>(); const identities = new Set<string>();
+  await mapLimited([...new Set(manifest.resources.map(resource => resource.object))], 4, async object => {
+    const metadata = await get<{ fields: { apiName: string }[] }>(`/api/v1/metadata/objects/${encodeURIComponent(object)}/fields`, manifest.tenant);
+    if (!Array.isArray(metadata.fields)) throw new Error('Invalid metadata response');
+    if (metadata.fields.length >= 200) fail('Field catalog reached its source limit; cannot safely validate a declarative payload');
+    schemas.set(object, metadata.fields.map(f => f.apiName));
+  });
   for (const resource of manifest.resources) {
-    if (!schemas.has(resource.object)) {
-      const metadata = await get<{ fields: { apiName: string }[] }>(`/api/v1/metadata/objects/${encodeURIComponent(resource.object)}/fields`, manifest.tenant);
-      if (!Array.isArray(metadata.fields)) throw new Error('Invalid metadata response');
-      if (metadata.fields.length >= 200) fail('Field catalog reached its source limit; cannot safely validate a declarative payload');
-      schemas.set(resource.object, metadata.fields.map(f => f.apiName));
-    }
     const allowed = schemas.get(resource.object)!;
     const unknown = Object.keys({ ...resource.match, ...resource.data }).filter(k => !allowed.includes(k));
     if (unknown.length) fail(`${resource.key}: unknown fields: ${unknown.join(', ')}`);
-    const current = resource.id ? await getRecord(resource.object, resource.id, manifest.tenant) : await matched(resource.object, resource.match!, manifest.tenant);
+  }
+  const observed = await mapLimited(manifest.resources, 4, async resource => resource.id ? await getRecord(resource.object, resource.id, manifest.tenant) : await matched(resource.object, resource.match!, manifest.tenant));
+  for (const [index, resource] of manifest.resources.entries()) {
+    const current = observed[index];
     if (!current) {
       operations.push({ key: resource.key, object: resource.object, action: 'create', match: resource.match, payload: { ...resource.match, ...resource.data }, changedFields: Object.keys({ ...resource.match, ...resource.data }) }); continue;
     }
@@ -124,14 +130,15 @@ export function summarizePlan(plan: ResourcePlan): JsonRecord {
 export async function applyResourcePlan(plan: ResourcePlan, explicitTenant?: string): Promise<JsonRecord> {
   assertPlanTarget(plan, explicitTenant);
   if (plan.operations.some(op => /^fm_/.test(op.object) && op.action !== 'noop')) fail('Declarative writes to platform system objects require their domain commands; use resources for customer records');
+  if (process.env.FLUXOMIND_ACCESS_TOKEN) await remoteIdentity(plan.tenant);
   // Complete read-only preflight before the first write. No changes on a stale initial plan.
-  for (const op of plan.operations) {
+  await mapLimited(plan.operations, 4, async op => {
     if (op.action === 'create') { if (await matched(op.object, op.match!, plan.tenant)) fail(`${op.key}: target now exists; regenerate the plan`); }
     else {
       const current = await getRecord(op.object, op.id!, plan.tenant);
       if (Object.entries(op.expectedValues!).some(([k, v]) => !Object.hasOwn(current, k) || !isDeepStrictEqual(current[k], v))) fail(`${op.key}: plan baseline changed; regenerate the plan`);
     }
-  }
+  });
   const results: JsonRecord[] = [];
   for (const op of plan.operations) {
     if (op.action === 'noop') { results.push({ key: op.key, action: 'noop', id: op.id, success: true }); continue; }

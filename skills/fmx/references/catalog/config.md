@@ -1,4 +1,4 @@
-# config — CLI 0.4.0
+# config — CLI 0.5.0
 
 Generated from `fmx catalog config --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 

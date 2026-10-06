@@ -1,4 +1,4 @@
-# CLI reference — 0.4.0
+# CLI reference — 0.5.0
 
 Generated from the offline command catalog. Read only the group/section needed for the task. Examples use `fmx` as shorthand for the executable selected in SKILL.md. Placeholders must come from user intent or observed results. A listed command does not establish permission to run it.
 
@@ -13,7 +13,7 @@ Generated from the offline command catalog. Read only the group/section needed f
 
 - [`init`](catalog/init.md): Scaffold a new extension project
 - [`auth`](catalog/auth.md): Authenticate with Fluxomind Platform
-- [`dev`](catalog/dev.md): Start development mode (watch + auto-deploy)
+- [`dev`](catalog/dev.md): Start development mode (watch + upload; acceptance is not deployment proof)
 - [`deploy`](catalog/deploy.md): Deploy extension to the platform
 - [`test`](catalog/test.md): Run tests in the remote Deno sandbox
 - [`logs`](catalog/logs.md): View extension logs
@@ -30,6 +30,8 @@ Generated from the offline command catalog. Read only the group/section needed f
 - [`connections`](catalog/connections.md): Inspect integration connections without returning credentials
 - [`jobs`](catalog/jobs.md): Inspect queue jobs; read-only operations
 - [`knowledge`](catalog/knowledge.md): Inspect existing knowledge and ingest text through the platform retrieval service
+- [`files`](catalog/files.md): Upload, inspect and link files through FileEngine; no local credential handling
+- [`tenant`](catalog/tenant.md): Read authenticated tenant identity and quota
 - [`access`](catalog/access.md): Inspect server-provided record capabilities; never infer write permission from a successful read
 - [`resources`](catalog/resources.md): Declarative DataEngine record fields: validate, plan and conditionally apply; no automatic deletes
 - [`dashboard`](catalog/dashboard.md): Read compact live context using GET only; partial failures remain visible

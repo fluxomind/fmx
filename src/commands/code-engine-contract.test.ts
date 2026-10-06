@@ -67,6 +67,6 @@ describe('CodeEngine CLI HTTP contract — BUG-350', () => {
 
     await logsCommand.parseAsync(['node', 'logs', 'project-a']);
 
-    expect(mockedGet).toHaveBeenCalledWith(expect.stringContaining('/api/code-engine/logs?extensionId=project-a'));
+    expect(mockedGet).toHaveBeenCalledWith(expect.stringContaining('/api/code-engine/logs?extensionId=project-a'), undefined);
   });
 });

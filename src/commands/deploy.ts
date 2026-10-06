@@ -9,11 +9,12 @@ export const deployCommand = new Command('deploy')
   .description('Deploy extension to the platform')
   .option('-d, --dir <path>', 'Project directory', '.')
   .option('--dry-run', 'Validate and preview without deploying')
-  .option('--git', 'Deploy via Git push (requires EVO-163 GitHub integration)')
+  .option('--git', 'Unsupported: Git deployment is not implemented')
   .option('--env <environment>', 'Target environment', 'production')
   .option('--version <semver>', 'Override version')
   .option('--force', 'Bypass strict manifest validation for emergency hotfix (EVO-394 CA-9). Audit trail records deploy_source=cli_force')
   .action(async (opts: { dir: string; dryRun?: boolean; git?: boolean; env: string; version?: string; force?: boolean }) => {
+    if (opts.git) throw Object.assign(new Error('Git deploy is not implemented. Use fmx deploy for direct upload.'), { code: 'UNSUPPORTED_CAPABILITY' });
     // Validate manifest locally (fail fast) — --force bypasses errors but still parses
     const manifest = validateManifestLocal(opts.dir);
     if (!manifest.valid) {
@@ -25,13 +26,6 @@ export const deployCommand = new Command('deploy')
         manifest.errors.forEach((e) => error(`  ${e}`));
         process.exit(1);
       }
-    }
-
-    if (opts.git) {
-      info('Git deploy: pushing to remote and waiting for webhook...');
-      warn('Git deploy requires GitHub integration (EVO-163). Use `fmx deploy` for direct upload.');
-      // TODO: git push + SSE/polling for webhook confirmation
-      return;
     }
 
     // Bundle files

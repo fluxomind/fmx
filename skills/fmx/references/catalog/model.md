@@ -1,4 +1,4 @@
-# model — CLI 0.4.0
+# model — CLI 0.5.0
 
 Generated from `fmx catalog model --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 
@@ -22,6 +22,46 @@ fmx model create-object [options]
 - `--data <json>`: JSON payload
 - `--file <path>`: JSON file; - reads stdin
 
+Declared contract (local CLI; server authorization remains authoritative):
+
+```json
+{
+  "method": "POST",
+  "endpoint": "/api/services/modelling/objects",
+  "effects": [
+    "write"
+  ],
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "api_name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "display_name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "api_name"
+    ],
+    "additionalProperties": false
+  },
+  "serverAuthoritative": true,
+  "validation": "Offline structure; platform validates authorization and semantics."
+}
+```
+
 ## model create-field
 
 Create a field; payload uses apiName, displayName, dataType and field settings
@@ -33,6 +73,195 @@ fmx model create-field <object> [options]
 - `--tenant <uuid>`: Tenant (default: configured tenant)
 - `--data <json>`: JSON payload
 - `--file <path>`: JSON file; - reads stdin
+
+Declared contract (local CLI; server authorization remains authoritative):
+
+```json
+{
+  "method": "POST",
+  "endpoint": "/api/services/modelling/objects/:object/fields/create",
+  "effects": [
+    "write"
+  ],
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "apiName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "displayName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "dataType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "isRequired": {
+        "type": "boolean"
+      },
+      "sortOrder": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+      },
+      "settings": {
+        "anyOf": [
+          {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "description": {
+        "type": "string"
+      },
+      "defaultValue": {},
+      "maxLength": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "scale": {
+        "type": "number",
+        "minimum": 0
+      },
+      "maskingType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "semanticType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "formulaExpression": {
+        "type": "string",
+        "minLength": 1
+      },
+      "formulaReturnType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "parentObjectApiName": {
+        "type": "string",
+        "minLength": 1
+      },
+      "relationshipType": {
+        "type": "string",
+        "minLength": 1
+      },
+      "onDelete": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "apiName",
+      "displayName"
+    ],
+    "additionalProperties": false
+  },
+  "serverAuthoritative": true,
+  "validation": "Offline structure; platform validates authorization and semantics."
+}
+```
+
+## model restore-object
+
+Restore a soft-retired object within the platform retention window
+
+```sh
+fmx model restore-object <object> [options]
+```
+
+- `--tenant <uuid>`: Tenant (default: configured tenant)
+- `--full`: Complete response text
+
+Declared contract (local CLI; server authorization remains authoritative):
+
+```json
+{
+  "method": "POST",
+  "endpoint": "/api/services/modelling/objects/:object/restore",
+  "effects": [
+    "write"
+  ],
+  "serverAuthoritative": true,
+  "validation": "JSON Schema describes structure. Additional semantic checks run in the CLI and platform."
+}
+```
+
+## model export
+
+Export comma-separated object names; platform source limits apply
+
+```sh
+fmx model export <objects> [options]
+```
+
+- `--tenant <uuid>`: Tenant (default: configured tenant)
+- `--out <path>`: Save complete JSON with private permissions; refuses overwrite
+
+## model import
+
+Import object and field metadata; not a full app restore, no atomic rollback
+
+```sh
+fmx model import [options]
+```
+
+- `--tenant <uuid>`: Tenant (default: configured tenant)
+- `--data <json>`: JSON payload
+- `--file <path>`: JSON file; - reads stdin
+
+Declared contract (local CLI; server authorization remains authoritative):
+
+```json
+{
+  "method": "POST",
+  "endpoint": "/api/services/modelling/import",
+  "effects": [
+    "write",
+    "may-partially-apply"
+  ],
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "version": {
+        "type": "string"
+      },
+      "exportedAt": {
+        "type": "string"
+      },
+      "objects": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      }
+    },
+    "required": [
+      "objects"
+    ],
+    "additionalProperties": false
+  },
+  "serverAuthoritative": true,
+  "validation": "Structural input checks only; references remain server-controlled."
+}
+```
 
 ## model update-object
 

@@ -3,10 +3,13 @@
  * @package @fluxomind/cli
  */
 
-import { getAuthToken } from './auth-manager';
+import { sessionHeaders, resolveTargetTenant } from './session-transport';
+import { refreshIfExpired, forceRefresh } from './auth-refresh';
+import { AuthError, ServerError } from './api-client';
 import { resolveApiUrl } from './config-manager';
 
 export interface SSEOptions {
+  tenant?: string;
   path: string;
   onMessage: (event: string, data: string) => void;
   onError?: (err: Error) => void;
@@ -40,6 +43,7 @@ export class SSEClient {
       } catch (err) {
         if ((err as Error).name === 'AbortError' || this.stopped) return;
         this.options.onError?.(err as Error);
+        if (err instanceof AuthError || err instanceof ServerError && err.statusCode < 500) throw err;
         if (this.retryCount >= maxRetries) return;
         this.retryCount++;
       }
@@ -50,7 +54,8 @@ export class SSEClient {
   }
 
   private async openOnce(): Promise<void> {
-    const token = getAuthToken();
+    const tenant = process.env.FLUXOMIND_ACCESS_TOKEN ? undefined : resolveTargetTenant(this.options.tenant);
+    if (tenant) await refreshIfExpired(tenant);
     const url = `${resolveApiUrl()}${this.options.path}`;
     this.controller = new AbortController();
 
@@ -59,15 +64,23 @@ export class SSEClient {
       'Cache-Control': 'no-cache',
     };
 
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    Object.assign(headers, sessionHeaders(this.options.path, this.options.tenant));
     if (this.lastEventId) headers['Last-Event-ID'] = this.lastEventId;
 
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       headers,
       signal: this.controller.signal,
     });
+    if (response.status === 401 && tenant && (await forceRefresh(tenant)).refreshed) {
+      await response.body?.cancel();
+      Object.assign(headers, sessionHeaders(this.options.path, this.options.tenant));
+      response = await fetch(url, { headers, signal: this.controller.signal });
+    }
 
     if (!response.ok) {
+      await response.body?.cancel();
+      if (response.status === 401) throw new AuthError('Session expired. Run: fmx auth login', 401);
+      if (response.status === 403) throw new ServerError('SSE access denied', 403, 'PERMISSION_DENIED');
       throw new Error(`SSE connection failed: ${response.status}`);
     }
 
@@ -84,7 +97,7 @@ export class SSEClient {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
+      const lines = buffer.split(/\r?\n/);
       buffer = lines.pop() ?? '';
 
       for (const line of lines) {

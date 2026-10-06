@@ -3,11 +3,10 @@
  * @package @fluxomind/cli
  */
 
-import { loadConfig, resolveApiUrl } from './config-manager';
-import { getAuthToken, getStoredTenants, getTenantAuth } from './auth-manager';
+import { resolveApiUrl } from './config-manager';
+import { resolveTargetTenant, sessionHeaders } from './session-transport';
 import { refreshIfExpired, forceRefresh } from './auth-refresh';
 import { isDryRun, DryRunPreview } from './dry-run';
-import { projectContext } from './project-context';
 import { randomUUID } from 'crypto';
 import { isReadOnly, ReadOnlyError } from './request-policy';
 
@@ -63,20 +62,12 @@ const DEPLOY_TIMEOUT = 120_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
-export function resolveTargetTenant(explicit?: string): string | undefined {
-  if (explicit) return explicit;
-  const project = projectContext();
-  if (project) return project.tenant;
-  const config = loadConfig();
-  if (config.defaultTenant) return config.defaultTenant;
-  const [first] = getStoredTenants();
-  return first;
-}
+export { resolveTargetTenant } from './session-transport';
 
 export async function apiRequest<T = unknown>(options: RequestOptions): Promise<T> {
   if (isDryRun() && options.method !== 'GET') throw new DryRunPreview(options.method, options.path, options.body);
   if (isReadOnly() && options.method !== 'GET') throw new ReadOnlyError();
-  const envToken = process.env.FLUXOMIND_ACCESS_TOKEN;
+  const envToken = process.env.FLUXOMIND_ACCESS_TOKEN || undefined;
   const targetTenant = envToken ? undefined : resolveTargetTenant(options.tenant);
 
   if (targetTenant) {
@@ -89,14 +80,13 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
   const idempotencyKey = randomUUID();
   const buildHeaders = (): Record<string, string> => {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       'Idempotency-Key': idempotencyKey,
       'x-correlation-id': idempotencyKey,
       'x-request-id': idempotencyKey,
       ...options.headers,
     };
-    const token = envToken ?? (targetTenant ? getTenantAuth(targetTenant)?.accessToken ?? null : getAuthToken());
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    Object.assign(headers, sessionHeaders(options.path, options.tenant));
     return headers;
   };
 
@@ -104,7 +94,7 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
     return await fetch(url, {
       method: options.method,
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.body instanceof FormData ? options.body : options.body !== undefined ? JSON.stringify(options.body) : undefined,
       // Keep the deadline active while the response body is being read too.
       signal: AbortSignal.timeout(timeout),
     });
@@ -130,10 +120,6 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
         throw new AuthError('Session expired. Run: fmx auth login', 401);
       }
 
-      if (response.status === 403) {
-        throw new AuthError('Permission denied. Check your tenant configuration.', 403);
-      }
-
       if (response.status === 422) {
         const data = await response.json().catch(() => ({}));
         throw new ValidationError('Validation failed', data, 422);
@@ -144,7 +130,7 @@ export async function apiRequest<T = unknown>(options: RequestOptions): Promise<
         const envelope = payload?.error;
         const objectError = envelope && typeof envelope === 'object' ? envelope as Record<string, unknown> : undefined;
         const message = typeof payload?.message === 'string' ? payload.message : typeof objectError?.message === 'string' ? objectError.message : typeof envelope === 'string' ? envelope : `HTTP ${response.status}`;
-        const code = typeof objectError?.code === 'string' ? objectError.code : typeof payload?.errorCode === 'string' ? payload.errorCode : undefined;
+        const code = typeof objectError?.code === 'string' ? objectError.code : typeof payload?.errorCode === 'string' ? payload.errorCode : response.status === 403 ? (envelope === 'forbidden_internal_api' ? envelope : 'PERMISSION_DENIED') : undefined;
         throw new ServerError(message.slice(0, 2000), response.status, code, payload?.conflict ?? objectError?.details ?? payload?.details);
       }
 

@@ -8,7 +8,7 @@ import { SSEClient } from '../lib/sse-client';
 import { success, error, info, dim } from '../lib/output';
 
 export const devCommand = new Command('dev')
-  .description('Start development mode (watch + auto-deploy)')
+  .description('Start development mode (watch + upload; acceptance is not deployment proof)')
   .option('-d, --dir <path>', 'Project directory', '.')
   .action(async (opts: { dir: string }) => {
     const manifest = validateManifestLocal(opts.dir);
@@ -56,8 +56,9 @@ export const devCommand = new Command('dev')
     const watcher = new FileWatcher({
       dir: opts.dir,
       debounceMs: 300,
-      onChange: async (_changedFiles) => {
-        const bundle = createIncrementalBundle(opts.dir, previousHashes);
+      onChange: async (changedFiles) => {
+        const bundle = createIncrementalBundle(opts.dir, previousHashes, changedFiles);
+        if (bundle.deletedFiles?.length) { error('Remote dev upload has no deletion contract. Removed files: ' + bundle.deletedFiles.join(', ') + '. No upload sent; use a full supported deploy.'); return; }
         if (bundle.files.length === 0) return;
 
         try {
@@ -67,9 +68,9 @@ export const devCommand = new Command('dev')
           });
           deployCount++;
           bundle.files.forEach((f) => previousHashes.set(f.path, f.hash));
-          success(`Deployed ${dim(`(${result.duration}ms, ${bundle.files.length} files)`)}`);
+          success(`Upload accepted ${dim(`(${result.duration}ms, ${bundle.files.length} files)`)}`);
         } catch (err) {
-          error(`Deploy failed: ${(err as Error).message}`);
+          error(`Upload failed: ${(err as Error).message}`);
         }
       },
     });
@@ -85,7 +86,7 @@ export const devCommand = new Command('dev')
       try {
         await post('/api/code-engine/dev/session', { sessionId, action: 'close' });
       } catch { /* ignore */ }
-      success(`Session ended (${deployCount} deploys)`);
+      success(`Session ended (${deployCount} accepted uploads)`);
       process.exit(0);
     };
 

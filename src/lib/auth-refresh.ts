@@ -7,6 +7,14 @@ import { resolveApiUrl } from './config-manager';
 import { getTenantAuth, saveTokens } from './auth-manager';
 
 const REFRESH_BUFFER_MS = 60_000;
+const pending = new Map<string, Promise<RefreshOutcome>>();
+function renew(tenant: string, token: string, fetchFn: typeof fetch): Promise<RefreshOutcome> {
+  const existing = pending.get(tenant);
+  if (existing) return existing;
+  const work = performRefresh(tenant, token, fetchFn).finally(() => { pending.delete(tenant); });
+  pending.set(tenant, work);
+  return work;
+}
 
 interface RefreshResponse {
   accessToken: string;
@@ -34,7 +42,7 @@ export async function refreshIfExpired(
     typeof current.expiresAt === 'number' && current.expiresAt - Date.now() < REFRESH_BUFFER_MS;
   if (!needsRefresh) return { refreshed: false };
 
-  return performRefresh(tenant, current.refreshToken, fetchFn);
+  return renew(tenant, current.refreshToken, fetchFn);
 }
 
 export async function forceRefresh(
@@ -43,7 +51,7 @@ export async function forceRefresh(
 ): Promise<RefreshOutcome> {
   const current = getTenantAuth(tenant);
   if (!current || !current.refreshToken) return { refreshed: false };
-  return performRefresh(tenant, current.refreshToken, fetchFn);
+  return renew(tenant, current.refreshToken, fetchFn);
 }
 
 async function performRefresh(
@@ -55,11 +63,13 @@ async function performRefresh(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
+    signal: AbortSignal.timeout(30_000),
   });
   if (!response.ok) {
     return { refreshed: false };
   }
   const payload = (await response.json()) as RefreshResponse;
+  if (!payload.accessToken || !payload.refreshToken || !payload.expiresAt) throw new Error('Invalid authentication refresh response');
   const expiresAt = Date.parse(payload.expiresAt);
   const current = getTenantAuth(tenant);
   saveTokens(tenant, {

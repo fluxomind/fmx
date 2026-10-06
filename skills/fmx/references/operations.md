@@ -22,7 +22,7 @@ fmx resources apply --file <plan.json> --tenant <tenant-uuid>
 - A manifest uses `apiVersion: fmx/v1`, `apiOrigin`, `tenant` and `resources`; each resource has a key, object, data and exactly one of `id` or equality `match`. Request `resources schema` for the full contract.
 - Offline validation does not observe remote state. `plan --remote` reads schemas/current records and saves create/update/noop actions with baselines; `--out` requires remote planning and refuses overwrite.
 - Plans pin the API origin and tenant. They reject ambiguous identities, unknown/identity/audit/credential fields and duplicate targets. An absent explicit ID is an error, not permission to create. System `fm_` objects require domain commands.
-- `apply --dry-run` sends no HTTP and reports `state: not-rechecked`; it does not prove the baseline is still current. Real apply rechecks **all** baselines before its first write and uses conditional updates. This is not a multi-record transaction.
+- `apply --dry-run` sends no HTTP and reports `state: not-rechecked`; it does not prove the baseline is still current. Remote schema/record reads use bounded concurrency (four at a time), with shared schema reads per object. Writes remain ordered. Real apply rechecks **all** baselines before its first write and uses conditional updates. This is not a multi-record transaction.
 - Apply stops on partial failure; it does not automatically resume or roll back. A create lookup is not atomic uniqueness or guaranteed deduplication. After an unknown result, inspect existing records before proposing another create.
 - Complete plan/export files may contain customer values; stdout is compact by default. Use `--full` only when those values must be reviewed, and choose a new filename rather than overwriting an existing reviewed artifact.
 
@@ -32,7 +32,7 @@ Use `workflow schema` for definition shape and `workflow actions list/view` for 
 
 `workflow create/update` saves a draft. `workflow publish <id>` creates an immutable version; `workflow rollback <id> <versionId>` creates a new version from a prior one. These are separate effects. Export with `workflow export <id> --out <path>` for lossless JSON; diff compares definitions, not dependency drift. Exports do not include credentials or all referenced resources.
 
-`workflow run <id> --wait` starts one run and observes that ID. `waiting` is suspended, not completed. Timeout or observation failure does not cancel the run. Continue with `workflow runs get <run-id>`; do not start another execution to check status. If no run ID was returned after an ambiguous response, inspect runs for the intended definition and report uncertainty rather than guessing one.
+`workflow run <id> --wait` starts one run and observes that ID. `waiting` is suspended, not completed. Timeout or observation failure does not cancel the run. Observation polling backs off within the original deadline; it does not restart work. Continue with `workflow runs get <run-id>`; do not start another execution to check status. If no run ID was returned after an ambiguous response, inspect runs for the intended definition and report uncertainty rather than guessing one.
 
 `jobs get/wait` observes existing work. `jobs retry`, schedules `run-now`, cancel and reschedule change server state or execute work; they are not diagnostics. Readiness/score operations can also persist state: inspect the contract before treating a command as read-only. Return run/job IDs and the observed terminal or suspended state to the user.
 
@@ -48,7 +48,7 @@ Knowledge linking uses existing bases. Unlink takes a `junctionId` and removes t
 
 For a complete app from a published template, discover `apps templates` and use `apps create --template <id>`. The platform owns instantiation of the template's resources. JSON-based `apps create` requires name/namespace and creates **application identity only**, not pages/navigation/members. Its same-namespace no-op lookup is not atomic uniqueness. Dry runs do not verify all template resources or write permissions.
 
-`apps components` edits existing pages. Component update `version` enables server conflict checks; deleting a component also removes descendants. Full app/page/menu composition may require an interface the CLI does not expose: state the gap rather than constructing system records through generic CRUD.
+`apps components` edits existing pages. Component update `version` enables server conflict checks; deleting a component also removes descendants. Discarding an app draft and full app/page/menu/member composition currently lack public server contracts: state the gap rather than constructing system records through generic CRUD.
 
 Use modelling/lifecycle commands for object and field changes; a retirement can schedule a future purge. `outcome: held, completed:false` means the change is awaiting a decision, not applied. Workflow approval tasks and personal policy HITL decisions are separate resources. A policy decision does not itself prove durable workflow resumption; inspect the execution afterward. Dependency denial is not authorization to delete linked resources.
 
@@ -57,3 +57,17 @@ Use modelling/lifecycle commands for object and field changes; a retirement can 
 For extension development, discover `init`, `validate`, `dev`, `deploy`, `test`, `logs` and `publish` from their own help. `fmx validate` checks the extension manifest locally; top-level `publish` submits an extension to the marketplace and differs from `workflow publish` and npm publication.
 
 These legacy/local paths are not protected by the platform global read-only/dry-run guarantees. Although `deploy` has its own dry-run option, inspect its actual help and behavior rather than assuming the global preview interception applies. `init --git` can provision/push a remote repository; public repository confirmation must not be bypassed with `--force` without user intent. `dev-env setup` writes IDE configuration and its default smoke check can deploy; use `--skip-smoke` when deployment is outside the task, and supply explicit `--ai-clients` instead of interactive prompts for agent automation.
+
+## Modelling, exports and files
+
+`model create-object` returns the server's canonical `apiName` after reading the returned `objectId`. Use that name for later commands. If `identityState: unverified`, preserve the object ID and inspect it; do not create another object to resolve the name. `catalog model create-object/create-field --full` exposes input schemas.
+
+`model retire-object <apiName>` is soft retirement with a scheduled purge, not immediate physical deletion. `model restore-object <apiName>` asks the lifecycle service to restore within its retention window; dependencies and authorization remain server-controlled.
+
+`model export <name1,name2> --out <new.json>` writes full received JSON with private permissions and refuses overwrite. Its `completeness: not-guaranteed` is material: the platform caps source collections and may omit dependent metadata. Never present it as a complete backup. `model import --file <export.json>` only restores supported object/field metadata; referenced IDs are not automatically portable between tenants. It rejects nonempty indexes/triggers/validations because the route would ignore them. Inspect per-object results and exit status; partial imports are not transactions and must not be blindly repeated. An export endpoint failure is a server capability gap, not permission to read internal storage.
+
+`files upload <path> --mime <type>` uploads one file (maximum 100 MiB); `--folder <id>` is optional. `--dry-run` prints metadata without reading/uploading contents. Use fictitious input for tests and retain the returned file ID for cleanup. `files get <id>` reads links/shares; `files for-target <object> <id>` lists attachments. Discover `files link/unlink` schemas before constructing payloads. Linking to knowledge with `relation_type: knowledge_source` may trigger ingestion; an accepted link does not prove indexing is complete. The disabled legacy chunk-ingestion route is not exposed as a working command.
+
+`files unlink` removes a relationship; `files delete <id>` deletes only an unreferenced file and leaves dependency decisions to the server. Do not unlink real dependencies just to make deletion succeed. `tenant quota` reads usage/limits; quota is not an authorization check.
+
+`deploy --git` fails explicitly as unsupported. `dev` reads only changed paths after its initial snapshot and serializes uploads, but the current upload endpoint's acceptance is not evidence of an actual deployment. Deleted source paths are reported as unsupported; do not claim they were removed remotely. `logs --tenant <uuid> --follow` uses the same selected session as REST; a 401/403 ends observation instead of reconnecting indefinitely.

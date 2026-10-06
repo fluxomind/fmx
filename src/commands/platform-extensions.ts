@@ -28,7 +28,7 @@ function read(parent: Command, command: string, description: string, endpoint: (
       const path: string[] = []; let current: Command | null = leaf; while (current?.parent) { path.unshift(current.name()); current = current.parent; }
       const nextArgs = [...path, ...args, '--offset', String(opts.offset + page.length), '--limit', String(opts.limit), ...(opts.tenant ? ['--tenant', opts.tenant] : []), ...(opts.fields ? ['--fields', opts.fields] : []), ...(opts.full ? ['--full'] : [])];
       const projected = projectRows(page, selectedFields ?? (opts.full ? undefined : fields), opts.full);
-      print({ count: page.length, total: null, sourceCount: rows.length, paginationScope: 'returned-source-window', sourceComplete: 'unknown', offset: opts.offset, hasMore, ...(sourceLimit ? { sourceLimit } : {}), [key]: projected.rows,
+      print({ count: page.length, total: null, sourceCount: rows.length, paginationScope: 'returned-source-window', fieldProjection: 'local', networkPagination: false, sourceComplete: 'unknown', offset: opts.offset, hasMore, ...(sourceLimit ? { sourceLimit } : {}), [key]: projected.rows,
         ...(projected.truncated ? { truncated: true, help: 'Use the same command with --full' } : {}), ...(hasMore ? { next: { command: 'fmx', args: nextArgs } } : {}) });
     } else detail(result, opts.full, 'Use the same command with --full');
   });

@@ -7,8 +7,8 @@ npm install -g @fluxomind/cli
 fmx --version
 ```
 
-Versão principal: **`0.4.0`**, publicada na tag npm `latest`. O comando de instalação acima
-usa essa tag; para fixar a versão, use `npm install -g @fluxomind/cli@0.4.0`.
+Versão principal: **`0.5.0`**, publicada na tag npm `latest`. O comando de instalação acima
+usa essa tag; para fixar a versão, use `npm install -g @fluxomind/cli@0.5.0`.
 
 ## Primeiro deploy em <30 minutos
 
@@ -171,6 +171,8 @@ CRUD, batches, agregações, atualização condicional, configuração portátil
 
 Para CI, `FLUXOMIND_ACCESS_TOKEN` pode fornecer um token Bearer de sessão aceito pela API, sem armazená-lo ou imprimi-lo. Ele prevalece sobre a sessão salva e não faz refresh. A CLI não presume que tokens MCP e FMX sejam intercambiáveis.
 
+Nas rotas `/api/services/*`, a sessão emitida pelo login da CLI também é enviada como cookie `session`, exigido pelo middleware da plataforma. APIs públicas continuam recebendo Bearer. Tokens de ambiente não são convertidos em cookies. Respostas `403` preservam o motivo informado pela plataforma, distinguindo bloqueio de rota, autorização e capacidade estrutural.
+
 ### Controles para agentes (0.4.0-alpha.3)
 
 Validação offline de workflows, catálogo de comandos, espera de execuções, exportação/diff e contexto por workspace. Novos comandos para objetos/campos, modelos/conhecimento de agentes, apps, conexões e jobs. Veja [contratos, exemplos e limites](docs/agent-workflows.md).
@@ -192,3 +194,11 @@ Use `fmx dashboard` para contexto vivo e `fmx access` para capabilities fornecid
 A versão acrescenta componentes de páginas, workers, allowlists de ferramentas, conhecimento, aprovações/HITL, schedules e controle/observação de jobs. `resources validate/plan/apply` oferece planos de campos de registros, updates condicionais e resultados parciais explícitos. O dry run não comprova autorização de escrita.
 
 [Contratos, exemplos, provas e limites](docs/agent-platform.md). No checkout, `npm run test:live` executa smoke checks autenticados com o guard de leitura, sem criar recursos no tenant.
+
+## Versão 0.5.0
+
+Identidade remota (`tenant identity`, `auth check`, `doctor --remote`), quota, restauração de objetos, exportação/importação limitada de modelagem e operações de arquivos. `create-object` retorna o nome canônico após consultar o ID criado. REST e SSE compartilham seleção de tenant e renovação de sessão; 403 preserva a negação e não dispara login/repetição. Planos paralelizam até quatro leituras, mas mantêm as escritas condicionais em ordem. Observação usa intervalos progressivos; o bundler incremental lê os caminhos alterados.
+
+A skill em `skills/fmx/` é canônica. Projetos consumidores, incluindo ScheduleHub, recebem cópia idêntica após cada atualização. Edite o template e as referências manuais, gere o catálogo e execute `skill:check`; não mantenha variantes locais divergentes.
+
+Limites: excluir rascunhos de apps e composição completa de páginas/menus/membros dependem de contratos públicos adicionais da plataforma. Exportação de modelagem não é backup completo, importação não é transacional e suporta apenas objetos/campos. `deploy --git` não está implementado. Aceitação do upload de desenvolvimento não prova implantação, e exclusões remotas nesse fluxo não são suportadas. Consulte [operações e verificação](skills/fmx/references/operations.md).

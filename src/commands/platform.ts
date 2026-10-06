@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { declareContract, parsedBody } from '../lib/command-contract';
+import { getRecord } from '../lib/record-service';
 import { createApp, appCreateSchema } from '../lib/app-create';
 import { Command, InvalidArgumentError } from 'commander';
 import { get, post } from '../lib/api-client';
@@ -9,22 +11,39 @@ import { projectRows } from './inspect';
 function required(body: JsonRecord, keys: string[]): void {
   for (const key of keys) if (typeof body[key] !== 'string' || !(body[key] as string).trim()) throw new InvalidArgumentError(`Payload requires a nonempty ${key}`);
 }
+const text = z.string().trim().min(1);
+const objectCreateSchema = z.strictObject({ name: text, api_name: text, display_name: text.optional(), description: z.string().optional() });
+const fieldCreateSchema = z.strictObject({ apiName: text, displayName: text, dataType: text.optional(), isRequired: z.boolean().optional(), sortOrder: z.number().int().optional(), settings: z.record(z.string(), z.unknown()).nullable().optional(), description: z.string().optional(), defaultValue: z.unknown().optional(), maxLength: z.number().positive().optional(), scale: z.number().nonnegative().optional(), maskingType: text.optional(), semanticType: text.optional(), formulaExpression: text.optional(), formulaReturnType: text.optional(), parentObjectApiName: text.optional(), relationshipType: text.optional(), onDelete: text.optional() });
 export const modelCommand = new Command('model').description('Model objects and fields through the platform modelling APIs');
-payloadOptions(modelCommand.command('create-object').description('Create an object; payload uses name, api_name, display_name, description'))
+const createObject = payloadOptions(modelCommand.command('create-object').description('Create an object; payload uses name, api_name, display_name, description'))
   .action(async (opts: PayloadOptions) => {
-    const body = objectPayload(opts); required(body, ['name', 'api_name']);
+    const body = parsedBody(objectCreateSchema, objectPayload(opts));
     const unknown = Object.keys(body).filter(k => !['name', 'api_name', 'display_name', 'description'].includes(k));
     if (unknown.length) throw new InvalidArgumentError(`Unsupported object properties: ${unknown.join(', ')}`);
-    mutationResult(await post('/api/services/modelling/objects', body, opts.tenant));
+    const result = await post<JsonRecord>('/api/services/modelling/objects', body, opts.tenant);
+    if (typeof result.objectId === 'string') {
+      try {
+        const row = await getRecord('fm__object', result.objectId, opts.tenant);
+        if (typeof row.api_name !== 'string') throw new Error('Canonical API name unavailable');
+        result.apiName = row.api_name;
+      } catch (err) {
+        result.identityState = 'unverified';
+        result.identityError = (err as Error).message;
+        result.help = 'Creation returned an objectId. Inspect that ID; do not repeat the create.';
+      }
+    }
+    mutationResult(result);
   });
-payloadOptions(modelCommand.command('create-field <object>').description('Create a field; payload uses apiName, displayName, dataType and field settings'))
+const createField = payloadOptions(modelCommand.command('create-field <object>').description('Create a field; payload uses apiName, displayName, dataType and field settings'))
   .action(async (object: string, opts: PayloadOptions) => {
-    const body = objectPayload(opts); required(body, ['apiName', 'displayName']);
+    const body = parsedBody(fieldCreateSchema, objectPayload(opts));
     const keys = ['apiName', 'displayName', 'dataType', 'isRequired', 'sortOrder', 'settings', 'description', 'defaultValue', 'maxLength', 'scale', 'maskingType', 'semanticType', 'formulaExpression', 'formulaReturnType', 'parentObjectApiName', 'relationshipType', 'onDelete'];
     const unknown = Object.keys(body).filter(k => !keys.includes(k)); if (unknown.length) throw new InvalidArgumentError(`Unsupported field properties: ${unknown.join(', ')}`);
     if (body.dataType === 'RELATION') required(body, ['parentObjectApiName']);
     mutationResult(await post(`/api/services/modelling/objects/${pathPart(object)}/fields/create`, body, opts.tenant));
   });
+declareContract(createObject, { method: 'POST', endpoint: '/api/services/modelling/objects', effects: ['write'], inputSchema: z.toJSONSchema(objectCreateSchema), serverAuthoritative: true, validation: 'Offline structure; platform validates authorization and semantics.' });
+declareContract(createField, { method: 'POST', endpoint: '/api/services/modelling/objects/:object/fields/create', effects: ['write'], inputSchema: z.toJSONSchema(fieldCreateSchema), serverAuthoritative: true, validation: 'Offline structure; platform validates authorization and semantics.' });
 export const appsCommand = new Command('apps').description('Discover tenant applications');
 tenantOption(appsCommand.command('list').description('List visible applications with compact identity and status'))
   .option('--full', 'Include server summaries').action(async (opts: PayloadOptions) => {

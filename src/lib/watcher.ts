@@ -25,6 +25,7 @@ const RELEVANT_EXTENSIONS = /\.(ts|tsx|js|jsx|json|toml)$/;
 export class FileWatcher {
   private watcher: FSWatcher | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private running: Promise<void> = Promise.resolve();
   private pendingChanges = new Set<string>();
 
   constructor(private readonly options: WatcherOptions) {}
@@ -47,7 +48,7 @@ export class FileWatcher {
       this.debounceTimer = setTimeout(() => {
         const files = Array.from(this.pendingChanges);
         this.pendingChanges.clear();
-        this.options.onChange(files);
+        this.running = this.running.then(async () => { await this.options.onChange(files); }).catch(error => { console.error('Watcher change failed:', error instanceof Error ? error.message : String(error)); });
       }, debounceMs);
     };
 
@@ -60,5 +61,6 @@ export class FileWatcher {
     if (this.debounceTimer) clearTimeout(this.debounceTimer);
     await this.watcher?.close();
     this.watcher = null;
+    await this.running;
   }
 }

@@ -24,6 +24,7 @@ beforeAll(async () => {
     const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk));
     const text = Buffer.concat(chunks).toString();
     calls.push({ method: req.method, path: req.url!, headers: req.headers, body: text ? JSON.parse(text) : undefined });
+    if (req.url === '/api/v1/session-check') { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ tokenUser: { tenantId: 'tenant', userId: 'user' } })); return; }
     const step = scripted.shift();
     res.writeHead(step?.status ?? status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(step ? step.response : sequence.length ? sequence.shift() : response));
   });
@@ -188,9 +189,9 @@ describe('Platform CLI over HTTP (route contracts)', () => {
     expect((await run('model', 'create-object', '--data', '{"name":"Demo","api_name":"demo__item"}')).code).toBe(0);
     expect(calls[0]).toMatchObject({ path: '/api/services/modelling/objects', method: 'POST', body: { name: 'Demo', api_name: 'demo__item' } });
     expect((await run('model', 'create-object', '--data', '{"name":"Demo","api_name":"demo__item","descriptin":"typo"}')).code).toBe(2);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2); expect(calls[1].method).toBe('GET');
     expect((await run('model', 'create-field', 'demo__item', '--data', '{"apiName":"title","displayName":"Title","isRequired":false}')).code).toBe(0);
-    expect(calls[1].path).toBe('/api/services/modelling/objects/demo__item/fields/create');
+    expect(calls[2].path).toBe('/api/services/modelling/objects/demo__item/fields/create');
   });
   it('omits secret fields in integration discovery even if the server returns them', async () => {
     response = { data: [{ id: 'connection', name: 'Demo', provider: 'demo', health_status: 'healthy', secret_encrypted: 'must-not-print', credentials: { token: 'must-not-print' } }] };
@@ -231,7 +232,7 @@ describe('Platform CLI over HTTP (route contracts)', () => {
     expect(calls).toHaveLength(0);
     response = { status: 'ok' };
     expect((await run('doctor', '--remote')).data.ok).toBe(true);
-    expect(calls[0]).toMatchObject({ method: 'GET', path: '/api/health' });
+    expect(calls[1]).toMatchObject({ method: 'GET', path: '/api/health' });
   });
 
   it('previews application creation offline without HTTP or execution', async () => {
