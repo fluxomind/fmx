@@ -1,4 +1,4 @@
-# dev-env — CLI 0.5.0
+# dev-env — CLI 0.6.0
 
 Generated from `fmx catalog dev-env --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 

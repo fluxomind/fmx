@@ -1,4 +1,4 @@
-# apps — CLI 0.5.0
+# apps — CLI 0.6.0
 
 Generated from `fmx catalog apps --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 
@@ -8,6 +8,79 @@ Discover tenant applications
 
 ```sh
 fmx apps
+```
+
+## apps delete
+
+Delete a draft app and its verified exclusive resources; shared primitives are preserved
+
+```sh
+fmx apps delete <id> [options]
+```
+
+- `--tenant <uuid>`: Tenant (default: configured tenant)
+- `--confirm <uuid>`: Required for execution: repeat the exact app UUID
+- `--with-data`: Explicitly include destruction of data in exclusive objects
+- `--include-object <uuid>`: Also include an explicitly approved object not linked to the app; repeat for each UUID Default: `[]`.
+- `--expected-tenant <uuid>`: Require this verified remote tenant UUID, including for a default OAuth session
+- `--remote`: With --dry-run: inventory the tenant using GET only
+- `--progress`: Print inventory progress to stderr; JSON result stays on stdout
+- `--out <path>`: Save the complete remote dry-run report; refuses overwrite
+- `--receipt <path>`: Required for execution: private progress/result file; refuses overwrite
+
+Declared contract (local CLI; server authorization remains authoritative):
+
+```json
+{
+  "method": "DELETE",
+  "endpoint": "/api/v1/dataEngine?entityApiParam=:entity&id=:id",
+  "effects": [
+    "write",
+    "deletes-exclusive-resources",
+    "destroys-object-data",
+    "native-cascades",
+    "preserves-shared-primitives",
+    "non-atomic-multi-request"
+  ],
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "confirm": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      },
+      "withData": {
+        "type": "boolean"
+      },
+      "includeObjects": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        }
+      },
+      "expectedTenant": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "additionalProperties": false
+  },
+  "serverAuthoritative": true,
+  "validation": "Draft-only client preflight. Full visible graph, explicit data scope and matching confirmation required. Missing/inaccessible resources and unsupported dependencies block execution."
+}
 ```
 
 ## apps list

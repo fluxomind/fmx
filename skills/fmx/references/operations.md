@@ -48,7 +48,7 @@ Knowledge linking uses existing bases. Unlink takes a `junctionId` and removes t
 
 For a complete app from a published template, discover `apps templates` and use `apps create --template <id>`. The platform owns instantiation of the template's resources. JSON-based `apps create` requires name/namespace and creates **application identity only**, not pages/navigation/members. Its same-namespace no-op lookup is not atomic uniqueness. Dry runs do not verify all template resources or write permissions.
 
-`apps components` edits existing pages. Component update `version` enables server conflict checks; deleting a component also removes descendants. Discarding an app draft and full app/page/menu/member composition currently lack public server contracts: state the gap rather than constructing system records through generic CRUD.
+`apps components` edits existing pages. Component update `version` enables server conflict checks; deleting a component also removes descendants. For draft app deletion, read [draft cleanup](app-deletion.md) and use `apps delete` rather than assembling generic CRUD calls. Full app/page/menu/member composition still lacks a complete public server contract.
 
 Use modelling/lifecycle commands for object and field changes; a retirement can schedule a future purge. `outcome: held, completed:false` means the change is awaiting a decision, not applied. Workflow approval tasks and personal policy HITL decisions are separate resources. A policy decision does not itself prove durable workflow resumption; inspect the execution afterward. Dependency denial is not authorization to delete linked resources.
 

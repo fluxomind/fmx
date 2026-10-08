@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { declareContract, parsedBody } from '../lib/command-contract';
 import { getRecord } from '../lib/record-service';
 import { createApp, appCreateSchema } from '../lib/app-create';
+import { registerAppDelete } from './app-delete';
 import { Command, InvalidArgumentError } from 'commander';
 import { get, post } from '../lib/api-client';
 import { fieldsOption, integer, objectPayload, pathPart, payloadOptions, tenantOption, type JsonRecord, type PayloadOptions } from '../lib/command-options';
@@ -45,6 +46,7 @@ const createField = payloadOptions(modelCommand.command('create-field <object>')
 declareContract(createObject, { method: 'POST', endpoint: '/api/services/modelling/objects', effects: ['write'], inputSchema: z.toJSONSchema(objectCreateSchema), serverAuthoritative: true, validation: 'Offline structure; platform validates authorization and semantics.' });
 declareContract(createField, { method: 'POST', endpoint: '/api/services/modelling/objects/:object/fields/create', effects: ['write'], inputSchema: z.toJSONSchema(fieldCreateSchema), serverAuthoritative: true, validation: 'Offline structure; platform validates authorization and semantics.' });
 export const appsCommand = new Command('apps').description('Discover tenant applications');
+registerAppDelete(appsCommand);
 tenantOption(appsCommand.command('list').description('List visible applications with compact identity and status'))
   .option('--full', 'Include server summaries').action(async (opts: PayloadOptions) => {
     const result = await get<{ apps: { application: JsonRecord; summary: unknown }[] }>('/api/services/appEngine/apps', opts.tenant);
