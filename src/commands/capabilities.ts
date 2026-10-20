@@ -1,14 +1,12 @@
 import { remoteIdentity } from '../lib/remote-identity';
 import { Command, InvalidArgumentError } from 'commander';
 import { z } from 'zod';
-import { openAsBlob, statSync, writeFileSync, existsSync } from 'node:fs';
-import { basename } from 'node:path';
+import { writeFileSync, existsSync } from 'node:fs';
+import { uploadLocalFile } from '../lib/file-upload';
 import { apiRequest, get } from '../lib/api-client';
 import { mutation, declareContract, parsedBody } from '../lib/command-contract';
 import { tenantOption, payloadOptions, objectPayload, type PayloadOptions } from '../lib/command-options';
 import { print } from '../lib/output';
-import { isDryRun } from '../lib/dry-run';
-import { isReadOnly, ReadOnlyError } from '../lib/request-policy';
 import { modelCommand } from './platform';
 import { authCommand } from './auth';
 const text = z.string().trim().min(1);
@@ -50,14 +48,6 @@ const linkSchema = z.strictObject({ file_id: z.uuid(), target_object_api_name: t
 mutation(filesCommand, { command: 'link', description: 'Link a file to a record; knowledge_source is validated by the platform', method: 'POST', endpoint: '/api/services/fileEngine/linkFile', schema: linkSchema, effects: ['write', 'may-trigger-ingestion'] });
 mutation(filesCommand, { command: 'unlink', description: 'Remove a file link; does not delete the file', method: 'POST', endpoint: '/api/services/fileEngine/unlinkFile', schema: linkSchema.omit({ relation_type: true }) });
 mutation(filesCommand, { command: 'delete <id>', description: 'Delete an unreferenced file; server rejects dependent links', method: 'DELETE', endpoint: '/api/services/fileEngine/items', buildBody: args => ({ itemType: 'file', itemId: args[0] }) });
-const upload = tenantOption(filesCommand.command('upload <path>').description('Upload one local file via multipart; maximum 100 MiB')).requiredOption('--mime <type>', 'Explicit MIME type accepted by the platform').option('--folder <id>', 'Destination folder');
-declareContract(upload, { method: 'POST', endpoint: '/api/services/fileEngine/upload', effects: ['write', 'uploads-file'], serverAuthoritative: true, validation: 'Local size check; server validates MIME, folder and permissions.' });
-upload.action(async (path, opts) => {
-  if (isReadOnly() && !isDryRun()) throw new ReadOnlyError();
-  const stat = statSync(path);
-  if (!stat.isFile() || stat.size > 100 * 1024 * 1024) throw new InvalidArgumentError('Upload requires a file of at most 100 MiB');
-  if (isDryRun()) { print({ dryRun: true, writesPerformed: false, method: 'POST', path: '/api/services/fileEngine/upload', filename: basename(path), bytes: stat.size, mime: opts.mime, folderId: opts.folder }); return; }
-  const form = new FormData(); form.append('file', await openAsBlob(path, { type: opts.mime }), basename(path));
-  if (opts.folder) form.append('folderId', opts.folder);
-  print(await apiRequest({ method: 'POST', path: '/api/services/fileEngine/upload', body: form, tenant: opts.tenant }));
-});
+const upload = tenantOption(filesCommand.command('upload <path>').description('Upload directly to storage; server enforces the tenant size limit')).requiredOption('--mime <type>', 'Explicit MIME type accepted by the platform').option('--folder <id>', 'Destination folder');
+declareContract(upload, { method: 'POST', endpoint: '/api/services/fileEngine/upload-sessions', effects: ['write', 'uploads-file'], serverAuthoritative: true, validation: 'Opens session, transfers directly to storage, then finalizes; server validates size, MIME, folder and permissions.' });
+upload.action(async (path, opts) => print(await uploadLocalFile(path, opts)));

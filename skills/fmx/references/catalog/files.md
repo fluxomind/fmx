@@ -1,4 +1,4 @@
-# files — CLI 0.6.0
+# files — CLI 0.6.1
 
 Generated from `fmx catalog files --full`. [Global options and other groups](../commands.md). Use the executable selected in SKILL.md. Read only the relevant command section.
 
@@ -168,7 +168,7 @@ Declared contract (local CLI; server authorization remains authoritative):
 
 ## files upload
 
-Upload one local file via multipart; maximum 100 MiB
+Upload directly to storage; server enforces the tenant size limit
 
 ```sh
 fmx files upload <path> [options]
@@ -183,13 +183,13 @@ Declared contract (local CLI; server authorization remains authoritative):
 ```json
 {
   "method": "POST",
-  "endpoint": "/api/services/fileEngine/upload",
+  "endpoint": "/api/services/fileEngine/upload-sessions",
   "effects": [
     "write",
     "uploads-file"
   ],
   "serverAuthoritative": true,
-  "validation": "Local size check; server validates MIME, folder and permissions."
+  "validation": "Opens session, transfers directly to storage, then finalizes; server validates size, MIME, folder and permissions."
 }
 ```
 

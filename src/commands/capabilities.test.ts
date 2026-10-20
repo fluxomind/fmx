@@ -12,16 +12,17 @@ const root = mkdtempSync(join(tmpdir(), 'fmx-capabilities-'));
 let server: Server, origin: string;
 let calls: { path: string; method: string; raw: string; contentType?: string }[];
 let response: unknown;
+let uploadSession = false;
 async function run(args: string[]) {
   try { const r = await exec(process.execPath,[resolve('dist/bin.js'),'--format','json',...args],{env:{...process.env,FLUXOMIND_API_URL:origin,FLUXOMIND_ACCESS_TOKEN:'opaque-fixture',FMX_READ_ONLY:'0'}}); return {code:0,data:JSON.parse(r.stdout)}; }
   catch(error) { const r=error as {code:number;stdout:string};return {code:r.code,data:JSON.parse(r.stdout)}; }
 }
 beforeAll(async()=>{
-  server=createServer(async(req,res)=>{const parts:Buffer[]=[];for await(const part of req)parts.push(Buffer.from(part));calls.push({path:req.url!,method:req.method!,raw:Buffer.concat(parts).toString(),contentType:req.headers['content-type']});res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(response));});
+  server=createServer(async(req,res)=>{const parts:Buffer[]=[];for await(const part of req)parts.push(Buffer.from(part));calls.push({path:req.url!,method:req.method!,raw:Buffer.concat(parts).toString(),contentType:req.headers['content-type']});res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify(uploadSession ? req.url === '/api/services/fileEngine/upload-sessions' ? {success:true,sessionId:other,sessionToken:'session-secret',uploadUrl:origin+'/storage',method:'PUT',protocol:'single',headers:{'Content-Type':'text/plain'}} : req.url?.endsWith('/finalize') ? {success:true,file:{id:tenant}} : {} : response));});
   await new Promise<void>(done=>server.listen(0,'127.0.0.1',done));origin=`http://127.0.0.1:${(server.address() as {port:number}).port}`;
 });
 afterAll(async()=>{await new Promise<void>(done=>server.close(()=>done()));rmSync(root,{recursive:true,force:true});});
-beforeEach(()=>{calls=[];response={success:true};});
+beforeEach(()=>{calls=[];response={success:true};uploadSession=false;});
 describe('new domain journeys',()=>{
   it('projects remote identity without printing diagnostic cookies and rejects tenant mismatch',async()=>{
     response={tokenUser:{tenantId:tenant,userId:'user'},rawCookieHeader:'sensitive',cookies:[{value:'secret'}]};
@@ -42,12 +43,16 @@ describe('new domain journeys',()=>{
     expect((await run(['model','import','--data',JSON.stringify({objects:[{apiName:'sample',triggers:[{name:'rule'}]}]})])).code).toBe(2);expect(calls).toHaveLength(0);
     response={results:[{apiName:'sample',status:'partial',fieldCount:1}]};expect((await run(['model','import','--data','{"objects":[{"apiName":"sample"}]}'])).code).toBe(1);expect(calls).toHaveLength(1);
   });
-  it('uploads a file with a generated multipart boundary and previews metadata only',async()=>{
+  it('uploads through a session and previews every step without HTTP',async()=>{
     const path=join(root,'sample.txt');writeFileSync(path,'fictional sample');
     expect((await run(['--dry-run','files','upload',path,'--mime','text/plain'])).data.bytes).toBe(16);expect(calls).toHaveLength(0);
     expect((await run(['--read-only','files','upload',path,'--mime','text/plain'])).code).toBe(1);expect(calls).toHaveLength(0);
+    uploadSession=true;
     expect((await run(['files','upload',path,'--mime','text/plain'])).code).toBe(0);
-    expect(calls[0].contentType).toContain('multipart/form-data; boundary=');expect(calls[0].raw).toContain('fictional sample');expect(calls[0].raw).toContain('name="file"');
+    expect(calls.map(c=>c.path)).toEqual(['/api/services/fileEngine/upload-sessions','/storage',`/api/services/fileEngine/upload-sessions/${other}/finalize`]);
+    expect(JSON.parse(calls[0].raw)).toEqual({name:'sample.txt',size:16,mimeType:'text/plain'});
+    expect(calls[1].raw).toBe('fictional sample');
+    expect(JSON.parse(calls[2].raw)).toEqual({sessionToken:'session-secret'});
   });
   it('keeps file deletion and unlinking distinct and guarded by domain routes',async()=>{
     expect((await run(['files','delete',tenant])).code).toBe(0);expect(JSON.parse(calls[0].raw)).toEqual({itemType:'file',itemId:tenant});
